@@ -399,7 +399,6 @@ export default function Jukebox() {
               className="track-row"
               onClick={() => !queueFull && handleSelectSong(track)}
             >
-              <div style={s.trackNumber}>{String(i + 1).padStart(2, "0")}</div>
               <img src={track.album?.images?.[2]?.url || track.album?.images?.[0]?.url} style={s.trackArt} alt="" />
               <div style={s.trackInfo}>
                 <div style={s.trackName}>{track.name}</div>
