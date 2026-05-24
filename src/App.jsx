@@ -11,7 +11,7 @@
 // ============================================================
 const CONFIG = {
   SPOTIFY_CLIENT_ID: "f10e6f681ca84e65a0d462981d57f269",
-  SPOTIFY_REDIRECT_URI: "https://192.168.0.161:5173",
+  SPOTIFY_REDIRECT_URI: "https://bar-jukebox.vercel.app",
   SPOTIFY_PLAYLIST_ID: "0tAMlHVXPcQGzQxeq5o8a3", // The curated bar playlist
   SWISH_NUMBER: "0731514203", // Bar's Swish number
   PRICE_PER_SONG: 10,
