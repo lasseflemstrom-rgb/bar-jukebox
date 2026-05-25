@@ -1,39 +1,35 @@
-import { list, getDownloadUrl } from "@vercel/blob";
+import { list } from "@vercel/blob";
+import { put } from "@vercel/blob";
 
 async function getToken() {
-  try {
-    const { blobs } = await list();
-    const tokenBlob = blobs.find(b => b.pathname === "spotify-token.json");
-    if (!tokenBlob) throw new Error("Token saknas");
-    
-    const res = await fetch(tokenBlob.downloadUrl);
-    const data = await res.json();
+  const { blobs } = await list();
+  const tokenBlob = blobs.find(function(b) { return b.pathname === "spotify-token.json"; });
+  if (!tokenBlob) throw new Error("Token saknas - logga in på /api/auth");
+  
+  const res = await fetch(tokenBlob.downloadUrl);
+  const data = await res.json();
 
-    if (Date.now() > data.expires_at) {
-      const refreshRes = await fetch("https://accounts.spotify.com/api/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          grant_type: "refresh_token",
-          refresh_token: data.refresh_token,
-          client_id: process.env.SPOTIFY_CLIENT_ID,
-          client_secret: process.env.SPOTIFY_CLIENT_SECRET,
-        }),
-      });
-      const refreshData = await refreshRes.json();
-      const { put } = await import("@vercel/blob");
-      const newToken = {
-        access_token: refreshData.access_token,
-        refresh_token: refreshData.refresh_token || data.refresh_token,
-        expires_at: Date.now() + (refreshData.expires_in - 60) * 1000,
-      };
-      await put("spotify-token.json", JSON.stringify(newToken), { access: "private", allowOverwrite: true });
-      return newToken.access_token;
-    }
-    return data.access_token;
-  } catch (err) {
-    throw new Error("Ingen Spotify-token: " + err.message);
+  if (Date.now() > data.expires_at) {
+    const refreshRes = await fetch("https://accounts.spotify.com/api/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: data.refresh_token,
+        client_id: process.env.SPOTIFY_CLIENT_ID,
+        client_secret: process.env.SPOTIFY_CLIENT_SECRET,
+      }),
+    });
+    const refreshData = await refreshRes.json();
+    const newToken = {
+      access_token: refreshData.access_token,
+      refresh_token: refreshData.refresh_token || data.refresh_token,
+      expires_at: Date.now() + (refreshData.expires_in - 60) * 1000,
+    };
+    await put("spotify-token.json", JSON.stringify(newToken), { access: "private", allowOverwrite: true });
+    return newToken.access_token;
   }
+  return data.access_token;
 }
 
 export default async function handler(req, res) {
@@ -41,9 +37,9 @@ export default async function handler(req, res) {
     try {
       const { uri } = req.body;
       const token = await getToken();
-      await fetch(`https://api.spotify.com/v1/me/player/queue?uri=${encodeURIComponent(uri)}`, {
+      await fetch("https://api.spotify.com/v1/me/player/queue?uri=" + encodeURIComponent(uri), {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: "Bearer " + token },
       });
       res.json({ success: true });
     } catch (err) {
@@ -52,28 +48,28 @@ export default async function handler(req, res) {
   } else if (req.method === "GET") {
     try {
       const token = await getToken();
-      const { type } = req.query;
+      const type = req.query.type;
 
       if (type === "playlist") {
         let all = [];
-        let url = `https://api.spotify.com/v1/playlists/${process.env.SPOTIFY_PLAYLIST_ID}/items?limit=50`;
+        let url = "https://api.spotify.com/v1/playlists/" + process.env.SPOTIFY_PLAYLIST_ID + "/items?limit=50";
         while (url) {
-          const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+          const r = await fetch(url, { headers: { Authorization: "Bearer " + token } });
           const data = await r.json();
-          all = [...all, ...data.items.filter((i) => i.item || i.track).map((i) => i.item || i.track)];
+          all = all.concat(data.items.filter(function(i) { return i.item || i.track; }).map(function(i) { return i.item || i.track; }));
           url = data.next || null;
         }
-        all.sort((a, b) => a.name.localeCompare(b.name, "sv"));
+        all.sort(function(a, b) { return a.name.localeCompare(b.name, "sv"); });
         res.json(all);
       } else if (type === "playing") {
         const r = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: "Bearer " + token },
         });
         if (r.status === 204) return res.json(null);
         res.json(await r.json());
       } else if (type === "queue") {
         const r = await fetch("https://api.spotify.com/v1/me/player/queue", {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: "Bearer " + token },
         });
         res.json(await r.json());
       }
