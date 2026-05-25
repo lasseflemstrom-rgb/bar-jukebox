@@ -1,13 +1,14 @@
-import { put, head, get } from "@vercel/blob";
+import { list, getDownloadUrl } from "@vercel/blob";
 
 async function getToken() {
   try {
-    // Hämta token från Blob
-    const blob = await head("spotify-token.json");
-    const res = await fetch(blob.url);
+    const { blobs } = await list();
+    const tokenBlob = blobs.find(b => b.pathname === "spotify-token.json");
+    if (!tokenBlob) throw new Error("Token saknas");
+    
+    const res = await fetch(tokenBlob.downloadUrl);
     const data = await res.json();
 
-    // Förnya token om den gått ut
     if (Date.now() > data.expires_at) {
       const refreshRes = await fetch("https://accounts.spotify.com/api/token", {
         method: "POST",
@@ -20,17 +21,18 @@ async function getToken() {
         }),
       });
       const refreshData = await refreshRes.json();
+      const { put } = await import("@vercel/blob");
       const newToken = {
         access_token: refreshData.access_token,
         refresh_token: refreshData.refresh_token || data.refresh_token,
         expires_at: Date.now() + (refreshData.expires_in - 60) * 1000,
       };
-      await put("spotify-token.json", JSON.stringify(newToken), { access: "public", allowOverwrite: true });
+      await put("spotify-token.json", JSON.stringify(newToken), { access: "private", allowOverwrite: true });
       return newToken.access_token;
     }
     return data.access_token;
-  } catch {
-    throw new Error("Ingen Spotify-token hittades. Logga in som ägare först.");
+  } catch (err) {
+    throw new Error("Ingen Spotify-token: " + err.message);
   }
 }
 
@@ -48,7 +50,6 @@ export default async function handler(req, res) {
       res.status(500).json({ error: err.message });
     }
   } else if (req.method === "GET") {
-    // Hämta spellista och nuvarande låt
     try {
       const token = await getToken();
       const { type } = req.query;
