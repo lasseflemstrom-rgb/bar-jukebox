@@ -1,4 +1,4 @@
-import { list } from "@vercel/blob";
+import { list, head } from "@vercel/blob";
 import { put } from "@vercel/blob";
 
 async function getToken() {
@@ -6,7 +6,8 @@ async function getToken() {
   const tokenBlob = blobs.find(function(b) { return b.pathname === "spotify-token.json"; });
   if (!tokenBlob) throw new Error("Token saknas - logga in på /api/auth");
   
-  const res = await fetch(tokenBlob.downloadUrl);
+  const blobInfo = await head(tokenBlob.url);
+  const res = await fetch(blobInfo.downloadUrl);
   const data = await res.json();
 
   if (Date.now() > data.expires_at) {
