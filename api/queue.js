@@ -1,36 +1,31 @@
-import { list, head } from "@vercel/blob";
-import { put } from "@vercel/blob";
+let cachedToken = null;
+let tokenExpiry = null;
 
 async function getToken() {
-  const { blobs } = await list();
-  const tokenBlob = blobs.find(function(b) { return b.pathname === "spotify-token.json"; });
-  if (!tokenBlob) throw new Error("Token saknas - logga in på /api/auth");
-  
-  const blobInfo = await head(tokenBlob.url);
-  const res = await fetch(blobInfo.downloadUrl);
-  const data = await res.json();
-
-  if (Date.now() > data.expires_at) {
-    const refreshRes = await fetch("https://accounts.spotify.com/api/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: data.refresh_token,
-        client_id: process.env.SPOTIFY_CLIENT_ID,
-        client_secret: process.env.SPOTIFY_CLIENT_SECRET,
-      }),
-    });
-    const refreshData = await refreshRes.json();
-    const newToken = {
-      access_token: refreshData.access_token,
-      refresh_token: refreshData.refresh_token || data.refresh_token,
-      expires_at: Date.now() + (refreshData.expires_in - 60) * 1000,
-    };
-    await put("spotify-token.json", JSON.stringify(newToken), { access: "private", allowOverwrite: true });
-    return newToken.access_token;
+  if (cachedToken && tokenExpiry && Date.now() < tokenExpiry) {
+    return cachedToken;
   }
-  return data.access_token;
+
+  const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
+  if (!refreshToken) throw new Error("Ingen refresh token - logga in på /api/auth");
+
+  const res = await fetch("https://accounts.spotify.com/api/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+      client_id: process.env.SPOTIFY_CLIENT_ID,
+      client_secret: process.env.SPOTIFY_CLIENT_SECRET,
+    }),
+  });
+
+  const data = await res.json();
+  if (!data.access_token) throw new Error("Kunde inte förnya token");
+
+  cachedToken = data.access_token;
+  tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+  return cachedToken;
 }
 
 export default async function handler(req, res) {
