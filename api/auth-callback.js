@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     access_token: data.access_token,
     refresh_token: data.refresh_token,
     expires_at: Date.now() + (data.expires_in - 60) * 1000,
-  }), { access: "public", allowOverwrite: true });
+ }, { access: "private", allowOverwrite: true });
 
   res.send("✅ Inloggad! Du kan stänga det här fönstret.");
 }
