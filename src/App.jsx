@@ -203,17 +203,18 @@ export default function Jukebox() {
   const queueFull = ourQueueCount >= CONFIG.MAX_QUEUE_SIZE;
  
   const calcWaitMs = () => {
-    if (ourQueueCount === 0) return 0;
-    const remainingCurrent = nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0;
-    let queuedMs = 0;
-    ourTrackIds.forEach((id) => {
-      const t = spotifyQueue.find((q) => q.id === id);
-      if (t) queuedMs += t.duration_ms;
-    });
-    // If our track is next in queue (no other queued ms), just show remaining current song
-    if (queuedMs === 0) return remainingCurrent;
-    return remainingCurrent + queuedMs;
-  };
+  if (ourQueueCount === 0) return 0;
+  // Väntetid = bara det som är kvar på nuvarande låt
+  // + längden på låtar i kön FÖRE vår låt (inte vår egen)
+  const remainingCurrent = nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0;
+  let queuedBefore = 0;
+  // Räkna bara låtar som ligger FÖRE vår i kön
+  for (let i = 0; i < spotifyQueue.length; i++) {
+    if (ourTrackIds.includes(spotifyQueue[i].id)) break; // sluta när vi hittar vår låt
+    queuedBefore += spotifyQueue[i].duration_ms;
+  }
+  return remainingCurrent + queuedBefore;
+};
  
   const waitMs = calcWaitMs();
   const waitMinutes = Math.ceil(waitMs / 60000);
@@ -222,7 +223,7 @@ export default function Jukebox() {
     : `⏱ Spelas om ca ${waitMinutes} min`;
  
   const handleSelectSong = async (track) => {
-    if (queueFull) { notify(`Kön är full! Max ${CONFIG.MAX_QUEUE_SIZE} låtar.`, "error"); return; }
+  if (queueFull) { setPaymentStep("full"); setSelected(track); return; }
     setSelected(track);
     if (testMode) {
       try {
@@ -308,7 +309,7 @@ export default function Jukebox() {
             {queueFull ? (
               <span style={{ color: "#fca5a5" }}>⛔ Kön är full — prova igen snart!</span>
             ) : ourQueueCount > 0 ? (
-              <span>🎵 {ourQueueCount} låt{ourQueueCount > 1 ? "ar" : ""} i kön · {waitMs < 60000 ? "Spelas härnäst!" : `Ca ${waitMinutes} min väntetid`}</span>
+              <span>🎵 {ourQueueCount} låt{ourQueueCount > 1 ? "ar" : ""} i kön · {waitMs < 60000 ? "Spelas härnäst!" : `Typ ${waitMinutes} min väntetid`}</span>
             ) : (
               <span>🎶 Kön är tom — var den första att välja!</span>
             )}
@@ -386,7 +387,20 @@ export default function Jukebox() {
             </div>
           </div>
         )}
- 
+ {/* Kön full modal */}
+{paymentStep === "full" && (
+  <div style={s.overlay} onClick={handleClose}>
+    <div style={s.modal} onClick={e => e.stopPropagation()}>
+      <div style={{ fontSize: 56 }}>🚫</div>
+      <div style={s.modalHeader}>KÖN ÄR FULL</div>
+      <p style={{ color: "#666", fontSize: 15, margin: 0 }}>
+        Just nu är det max {CONFIG.MAX_QUEUE_SIZE} låtar i kön. Vänta lite och försök igen!
+      </p>
+      <div style={s.modalWait}>Prova igen om en stund</div>
+      <button style={s.modalPrimary} onClick={handleClose}>Stäng</button>
+    </div>
+  </div>
+)}
         {/* Bekräftelse */}
         {paymentStep === "done" && (
           <div style={s.overlay} onClick={handleClose}>
