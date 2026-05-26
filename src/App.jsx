@@ -257,7 +257,7 @@ export default function Jukebox() {
                 onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "block"; }}
               />
               <div style={{ display: "none" }}>
-                <div style={s.fallbackNeonSmall}>NEON NEEDLE</div>
+                <div style={s.fallbackNeonSmall}>MUSIKMASKINEN</div>
                 <div style={s.fallbackSubSmall}>JUKEBOX</div>
               </div>
             </div>
