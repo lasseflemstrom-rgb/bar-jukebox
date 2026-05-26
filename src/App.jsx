@@ -1,6 +1,6 @@
 
   
-import { useState, useEffect, useRef } from "react";
+  import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
  
@@ -202,29 +202,25 @@ export default function Jukebox() {
   const ourQueueCount = ourTrackIds.length;
   const queueFull = ourQueueCount >= CONFIG.MAX_QUEUE_SIZE;
  
-const calcWaitMs = () => {
-  if (ourQueueCount === 0) return 0;
-  const remainingCurrent = nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0;
-  let queuedBefore = 0;
-  for (let i = 0; i < spotifyQueue.length; i++) {
-    if (ourTrackIds.includes(spotifyQueue[i].id)) break;
-    queuedBefore += spotifyQueue[i].duration_ms;
-  }
-  return remainingCurrent + queuedBefore;
-};
-
-const waitMs = calcWaitMs();
-const waitMinutes = Math.ceil(waitMs / 60000);
-const waitText = ourQueueCount === 0
-  ? "⚡ Spelas härnäst!"
-  : waitMinutes <= 1
-  ? `⏱ Ca 1 min väntetid`
-  : `⏱ Ca ${waitMinutes} min väntetid`;
+  const calcWaitMs = () => {
+    if (ourQueueCount === 0) return 0;
+    const remainingCurrent = nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0;
+    let queuedBefore = 0;
+    for (let i = 0; i < spotifyQueue.length; i++) {
+      if (ourTrackIds.includes(spotifyQueue[i].id)) break;
+      queuedBefore += spotifyQueue[i].duration_ms;
+    }
+    return remainingCurrent + queuedBefore;
+  };
  
-  
+  const waitMs = calcWaitMs();
+  const waitMinutes = Math.ceil(waitMs / 60000);
+  const waitText = waitMs < 60000
+    ? "⚡ Spelas härnäst!"
+    : `⏱ Ca ${waitMinutes} min väntetid`;
  
   const handleSelectSong = async (track) => {
-  if (queueFull) { setPaymentStep("full"); setSelected(track); return; }
+    if (queueFull) { setSelected(track); setPaymentStep("full"); return; }
     setSelected(track);
     if (testMode) {
       try {
@@ -310,7 +306,7 @@ const waitText = ourQueueCount === 0
             {queueFull ? (
               <span style={{ color: "#fca5a5" }}>⛔ Kön är full — prova igen snart!</span>
             ) : ourQueueCount > 0 ? (
-             <span>🎵 {ourQueueCount} låt{ourQueueCount > 1 ? "ar" : ""} i kön · {waitMinutes <= 1 ? "Ca 1 min väntetid" : `Ca ${waitMinutes} min väntetid`}</span>
+              <span>🎵 {ourQueueCount} låt{ourQueueCount > 1 ? "ar" : ""} i kön · {waitMs < 60000 ? "Spelas härnäst!" : `Typ ${waitMinutes} min väntetid`}</span>
             ) : (
               <span>🎶 Kön är tom — var den första att välja!</span>
             )}
@@ -388,20 +384,22 @@ const waitText = ourQueueCount === 0
             </div>
           </div>
         )}
- {/* Kön full modal */}
-{paymentStep === "full" && (
-  <div style={s.overlay} onClick={handleClose}>
-    <div style={s.modal} onClick={e => e.stopPropagation()}>
-      <div style={{ fontSize: 56 }}>🚫</div>
-      <div style={s.modalHeader}>KÖN ÄR FULL</div>
-      <p style={{ color: "#666", fontSize: 15, margin: 0 }}>
-        Just nu är det max {CONFIG.MAX_QUEUE_SIZE} låtar i kön. Vänta lite och försök igen!
-      </p>
-      <div style={s.modalWait}>Prova igen om en stund</div>
-      <button style={s.modalPrimary} onClick={handleClose}>Stäng</button>
-    </div>
-  </div>
-)}
+ 
+        {/* Kön full modal */}
+        {paymentStep === "full" && (
+          <div style={s.overlay} onClick={handleClose}>
+            <div style={s.modal} onClick={e => e.stopPropagation()}>
+              <div style={{ fontSize: 56 }}>🚫</div>
+              <div style={s.modalHeader}>KÖN ÄR FULL</div>
+              <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.5 }}>
+                Just nu är det {CONFIG.MAX_QUEUE_SIZE} låtar i kön. Vänta lite och försök igen när det finns plats!
+              </p>
+              <div style={s.modalWait}>Prova igen om en stund ⏱</div>
+              <button style={s.modalPrimary} onClick={handleClose}>Stäng</button>
+            </div>
+          </div>
+        )}
+ 
         {/* Bekräftelse */}
         {paymentStep === "done" && (
           <div style={s.overlay} onClick={handleClose}>
