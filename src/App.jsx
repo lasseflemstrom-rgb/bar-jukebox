@@ -1,7 +1,3 @@
-
-
-  STRIPE_PUBLISHABLE_KEY: "pk_test_51TazxlAiBeFbGSJSUmWzOombCWLtTwS1jf19caS6IgohzkL2DAzZpt9baz4U18bGt8mftZECI7Kg7xrccjnzPqtE00Gi7ZproV", // pk_test_...
-  
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
