@@ -207,8 +207,8 @@ export default function Jukebox() {
   const waitMs = 0;
   const waitMinutes = 0;
   const waitText = ourQueueCount === 0
-    ? "⚡ Näst i kön!"
-    : `🎵 ${ourQueueCount} låt${ourQueueCount > 1 ? "ar" : ""} före dig`;
+  ? "⚡ Näst i kön!"
+  : `🎵 ${ourQueueCount} låtar före dig`;
  
   const handleSelectSong = async (track) => {
     if (queueFull) { setSelected(track); setPaymentStep("full"); return; }
@@ -297,7 +297,7 @@ export default function Jukebox() {
             {queueFull ? (
               <span style={{ color: "#fca5a5" }}>⛔ Kön är full — prova igen snart!</span>
             ) : ourQueueCount > 0 ? (
-              <span>🎵 {ourQueueCount} låt{ourQueueCount > 1 ? "ar" : ""} i kön</span>
+              <span>🎵 {ourQueueCount + 1} låtar i kön</span>
             ) : (
               <span>🎶 Kön är tom — var den första att välja!</span>
             )}
