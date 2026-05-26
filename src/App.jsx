@@ -286,7 +286,7 @@ export default function Jukebox() {
             ) : ourQueueCount > 0 ? (
               <span>🎵 {ourQueueCount + 1} låtar i kön</span>
             ) : (
-              <span>🎶 Kön är tom — var den första att välja!</span>
+              <span>🎶 Kön är tom — välj nästa låt!</span>
             )}
             {!testMode && <span style={s.queuePrice}>{CONFIG.PRICE_PER_SONG} kr / låt</span>}
           </div>
