@@ -221,11 +221,7 @@ const waitText = ourQueueCount === 0
   ? `⏱ Ca 1 min väntetid`
   : `⏱ Ca ${waitMinutes} min väntetid`;
  
-  const waitMs = calcWaitMs();
-  const waitMinutes = Math.ceil(waitMs / 60000);
-  const waitText = ourQueueCount === 0 || waitMs < 60000
-    ? "⚡ Spelas härnäst!"
-    : `⏱ Spelas om ca ${waitMinutes} min`;
+  
  
   const handleSelectSong = async (track) => {
   if (queueFull) { setPaymentStep("full"); setSelected(track); return; }
