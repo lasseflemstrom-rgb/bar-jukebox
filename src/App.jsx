@@ -111,12 +111,7 @@ export default function Jukebox() {
   const [nowPlaying, setNowPlaying] = useState(null);
   const [progressMs, setProgressMs] = useState(0);
   const [spotifyQueue, setSpotifyQueue] = useState([]);
-  const [ourTrackIds, setOurTrackIds] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem("ourTrackIds");
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
+  const [ourTrackIds, setOurTrackIds] = useState([]);
   const [selected, setSelected] = useState(null);
   const [paymentStep, setPaymentStep] = useState(null);
   const [clientSecret, setClientSecret] = useState(null);
@@ -185,12 +180,7 @@ export default function Jukebox() {
     ));
   }, [search, tracks]);
  
-  // Spara kön i sessionStorage så den överlever en sidladdning
-  useEffect(() => {
-    try {
-      sessionStorage.setItem("ourTrackIds", JSON.stringify(ourTrackIds));
-    } catch {}
-  }, [ourTrackIds]);
+  
  
   const notify = (msg, type = "success") => {
     setNotification({ msg, type });
