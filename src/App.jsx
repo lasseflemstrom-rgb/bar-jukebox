@@ -202,19 +202,24 @@ export default function Jukebox() {
   const ourQueueCount = ourTrackIds.length;
   const queueFull = ourQueueCount >= CONFIG.MAX_QUEUE_SIZE;
  
-  const calcWaitMs = () => {
+const calcWaitMs = () => {
   if (ourQueueCount === 0) return 0;
-  // Väntetid = bara det som är kvar på nuvarande låt
-  // + längden på låtar i kön FÖRE vår låt (inte vår egen)
   const remainingCurrent = nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0;
   let queuedBefore = 0;
-  // Räkna bara låtar som ligger FÖRE vår i kön
   for (let i = 0; i < spotifyQueue.length; i++) {
-    if (ourTrackIds.includes(spotifyQueue[i].id)) break; // sluta när vi hittar vår låt
+    if (ourTrackIds.includes(spotifyQueue[i].id)) break;
     queuedBefore += spotifyQueue[i].duration_ms;
   }
   return remainingCurrent + queuedBefore;
 };
+
+const waitMs = calcWaitMs();
+const waitMinutes = Math.ceil(waitMs / 60000);
+const waitText = ourQueueCount === 0
+  ? "⚡ Spelas härnäst!"
+  : waitMinutes <= 1
+  ? `⏱ Ca 1 min väntetid`
+  : `⏱ Ca ${waitMinutes} min väntetid`;
  
   const waitMs = calcWaitMs();
   const waitMinutes = Math.ceil(waitMs / 60000);
@@ -309,7 +314,7 @@ export default function Jukebox() {
             {queueFull ? (
               <span style={{ color: "#fca5a5" }}>⛔ Kön är full — prova igen snart!</span>
             ) : ourQueueCount > 0 ? (
-              <span>🎵 {ourQueueCount} låt{ourQueueCount > 1 ? "ar" : ""} i kön · {waitMs < 60000 ? "Spelas härnäst!" : `Typ ${waitMinutes} min väntetid`}</span>
+             <span>🎵 {ourQueueCount} låt{ourQueueCount > 1 ? "ar" : ""} i kön · {waitMinutes <= 1 ? "Ca 1 min väntetid" : `Ca ${waitMinutes} min väntetid`}</span>
             ) : (
               <span>🎶 Kön är tom — var den första att välja!</span>
             )}
