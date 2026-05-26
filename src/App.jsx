@@ -1,6 +1,7 @@
 
   
-  import { useState, useEffect, useRef } from "react";
+  
+import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
  
@@ -202,22 +203,12 @@ export default function Jukebox() {
   const ourQueueCount = ourTrackIds.length;
   const queueFull = ourQueueCount >= CONFIG.MAX_QUEUE_SIZE;
  
-  const calcWaitMs = () => {
-    if (ourQueueCount === 0) return 0;
-    const remainingCurrent = nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0;
-    let queuedBefore = 0;
-    for (let i = 0; i < spotifyQueue.length; i++) {
-      if (ourTrackIds.includes(spotifyQueue[i].id)) break;
-      queuedBefore += spotifyQueue[i].duration_ms;
-    }
-    return remainingCurrent + queuedBefore;
-  };
- 
-  const waitMs = calcWaitMs();
-  const waitMinutes = Math.ceil(waitMs / 60000);
-  const waitText = waitMs < 60000
-    ? "⚡ Spelas härnäst!"
-    : `⏱ Ca ${waitMinutes} min väntetid`;
+  const calcWaitMs = () => 0; // Används inte längre
+  const waitMs = 0;
+  const waitMinutes = 0;
+  const waitText = ourQueueCount === 0
+    ? "⚡ Näst i kön!"
+    : `🎵 ${ourQueueCount} låt${ourQueueCount > 1 ? "ar" : ""} före dig`;
  
   const handleSelectSong = async (track) => {
     if (queueFull) { setSelected(track); setPaymentStep("full"); return; }
@@ -306,7 +297,7 @@ export default function Jukebox() {
             {queueFull ? (
               <span style={{ color: "#fca5a5" }}>⛔ Kön är full — prova igen snart!</span>
             ) : ourQueueCount > 0 ? (
-              <span>🎵 {ourQueueCount} låt{ourQueueCount > 1 ? "ar" : ""} i kön · {waitMs < 60000 ? "Spelas härnäst!" : `Typ ${waitMinutes} min väntetid`}</span>
+              <span>🎵 {ourQueueCount} låt{ourQueueCount > 1 ? "ar" : ""} i kön</span>
             ) : (
               <span>🎶 Kön är tom — var den första att välja!</span>
             )}
@@ -345,9 +336,9 @@ export default function Jukebox() {
           {filtered.map((track, i) => (
             <div
               key={track.id}
-              style={{ ...s.trackRow, opacity: queueFull ? 0.5 : 1, cursor: queueFull ? "not-allowed" : "pointer", animationDelay: `${i * 0.03}s` }}
+              style={{ ...s.trackRow, opacity: queueFull ? 0.5 : 1, cursor: "pointer", animationDelay: `${i * 0.03}s` }}
               className="track-row"
-              onClick={() => !queueFull && handleSelectSong(track)}
+              onClick={() => handleSelectSong(track)}
             >
               <img src={track.album?.images?.[2]?.url || track.album?.images?.[0]?.url} style={s.trackArt} alt="" />
               <div style={s.trackInfo}>
@@ -392,9 +383,8 @@ export default function Jukebox() {
               <div style={{ fontSize: 56 }}>🚫</div>
               <div style={s.modalHeader}>KÖN ÄR FULL</div>
               <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.5 }}>
-                Just nu är det {CONFIG.MAX_QUEUE_SIZE} låtar i kön. Vänta lite och försök igen när det finns plats!
+                Just nu är det {CONFIG.MAX_QUEUE_SIZE} låtar i kön. Vänta lite och försök igen!
               </p>
-              <div style={s.modalWait}>Prova igen om en stund ⏱</div>
               <button style={s.modalPrimary} onClick={handleClose}>Stäng</button>
             </div>
           </div>
