@@ -1,5 +1,6 @@
 
-  
+
+  STRIPE_PUBLISHABLE_KEY: "pk_test_51TazxlAiBeFbGSJSUmWzOombCWLtTwS1jf19caS6IgohzkL2DAzZpt9baz4U18bGt8mftZECI7Kg7xrccjnzPqtE00Gi7ZproV", // pk_test_...
   
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
@@ -203,12 +204,12 @@ export default function Jukebox() {
   const ourQueueCount = ourTrackIds.length;
   const queueFull = ourQueueCount >= CONFIG.MAX_QUEUE_SIZE;
  
-  const calcWaitMs = () => 0; // Används inte längre
-  const waitMs = 0;
-  const waitMinutes = 0;
+  // Låtar FÖRE din (för modalen efter köp) = nuvarande låt + köade låtar före din
   const waitText = ourQueueCount === 0
-  ? "⚡ Näst i kön!"
-  : `🎵 ${ourQueueCount} låtar före dig`;
+    ? "⚡ Näst i kön!"
+    : ourQueueCount === 1
+    ? "🎵 1 låt före dig"
+    : `🎵 ${ourQueueCount} låtar före dig`;
  
   const handleSelectSong = async (track) => {
     if (queueFull) { setSelected(track); setPaymentStep("full"); return; }
@@ -496,3 +497,4 @@ const s = {
   modalGhost: { background: "transparent", color: "#999", border: `1px solid ${chrome}`, borderRadius: 50, padding: "10px 24px", fontSize: 13, fontFamily: "'Lato', sans-serif", cursor: "pointer" },
   successIcon: { fontSize: 56 },
 };
+ 
