@@ -252,7 +252,7 @@ export default function Jukebox() {
             <div style={s.headerLogoWrap}>
               <img
                 src={LOGO_SRC}
-                alt="Neon Needle Jukebox"
+                alt="MUSIKMASKINEN Jukebox"
                 style={s.headerLogo}
                 onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "block"; }}
               />
