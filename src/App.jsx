@@ -1,3 +1,5 @@
+
+  
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -111,7 +113,12 @@ export default function Jukebox() {
   const [nowPlaying, setNowPlaying] = useState(null);
   const [progressMs, setProgressMs] = useState(0);
   const [spotifyQueue, setSpotifyQueue] = useState([]);
-  const [ourTrackIds, setOurTrackIds] = useState([]);
+  const [ourTrackIds, setOurTrackIds] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("ourTrackIds");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [selected, setSelected] = useState(null);
   const [paymentStep, setPaymentStep] = useState(null);
   const [clientSecret, setClientSecret] = useState(null);
@@ -180,6 +187,13 @@ export default function Jukebox() {
     ));
   }, [search, tracks]);
  
+  // Spara kön i sessionStorage så den överlever en sidladdning
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("ourTrackIds", JSON.stringify(ourTrackIds));
+    } catch {}
+  }, [ourTrackIds]);
+ 
   const notify = (msg, type = "success") => {
     setNotification({ msg, type });
     setTimeout(() => setNotification(null), 4000);
@@ -190,17 +204,22 @@ export default function Jukebox() {
  
   const calcWaitMs = () => {
     if (ourQueueCount === 0) return 0;
-    let wait = nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0;
+    const remainingCurrent = nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0;
+    let queuedMs = 0;
     ourTrackIds.forEach((id) => {
       const t = spotifyQueue.find((q) => q.id === id);
-      if (t) wait += t.duration_ms;
+      if (t) queuedMs += t.duration_ms;
     });
-    return wait;
+    // If our track is next in queue (no other queued ms), just show remaining current song
+    if (queuedMs === 0) return remainingCurrent;
+    return remainingCurrent + queuedMs;
   };
  
   const waitMs = calcWaitMs();
-  const waitStr = formatWait(waitMs);
-  const waitText = ourQueueCount === 0 ? "⚡ Spelas härnäst!" : waitStr ? `⏱ Spelas om ${waitStr}` : "Snart din tur!";
+  const waitMinutes = Math.ceil(waitMs / 60000);
+  const waitText = ourQueueCount === 0 || waitMs < 60000
+    ? "⚡ Spelas härnäst!"
+    : `⏱ Spelas om ca ${waitMinutes} min`;
  
   const handleSelectSong = async (track) => {
     if (queueFull) { notify(`Kön är full! Max ${CONFIG.MAX_QUEUE_SIZE} låtar.`, "error"); return; }
@@ -289,7 +308,7 @@ export default function Jukebox() {
             {queueFull ? (
               <span style={{ color: "#fca5a5" }}>⛔ Kön är full — prova igen snart!</span>
             ) : ourQueueCount > 0 ? (
-              <span>🎵 {ourQueueCount}/{CONFIG.MAX_QUEUE_SIZE} i kön{waitStr ? ` · Väntetid ${waitStr}` : ""}</span>
+              <span>🎵 {ourQueueCount} låt{ourQueueCount > 1 ? "ar" : ""} i kön · {waitMs < 60000 ? "Spelas härnäst!" : `Ca ${waitMinutes} min väntetid`}</span>
             ) : (
               <span>🎶 Kön är tom — var den första att välja!</span>
             )}
