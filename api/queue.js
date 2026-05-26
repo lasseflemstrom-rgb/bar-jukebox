@@ -1,11 +1,7 @@
-let cachedToken = null;
-let tokenExpiry = null;
+import { list } from "@vercel/blob";
+import { put } from "@vercel/blob";
 
 async function getToken() {
-  if (cachedToken && tokenExpiry && Date.now() < tokenExpiry) {
-    return cachedToken;
-  }
-
   const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
   if (!refreshToken) throw new Error("Ingen refresh token - logga in på /api/auth");
 
@@ -21,11 +17,8 @@ async function getToken() {
   });
 
   const data = await res.json();
-  if (!data.access_token) throw new Error("Kunde inte förnya token");
-
-  cachedToken = data.access_token;
-  tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
-  return cachedToken;
+  if (!data.access_token) throw new Error("Kunde inte förnya token: " + JSON.stringify(data));
+  return data.access_token;
 }
 
 export default async function handler(req, res) {
@@ -33,10 +26,14 @@ export default async function handler(req, res) {
     try {
       const { uri } = req.body;
       const token = await getToken();
-      await fetch("https://api.spotify.com/v1/me/player/queue?uri=" + encodeURIComponent(uri), {
+      const spotifyRes = await fetch("https://api.spotify.com/v1/me/player/queue?uri=" + encodeURIComponent(uri), {
         method: "POST",
         headers: { Authorization: "Bearer " + token },
       });
+      const text = await spotifyRes.text();
+      if (!spotifyRes.ok) {
+        return res.status(500).json({ error: "Spotify fel: " + spotifyRes.status + " " + text });
+      }
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
