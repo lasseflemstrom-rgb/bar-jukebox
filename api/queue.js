@@ -1,5 +1,4 @@
-import { list } from "@vercel/blob";
-import { put } from "@vercel/blob";
+import { list, put, del } from "@vercel/blob";
 
 async function getToken() {
   const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
@@ -21,10 +20,38 @@ async function getToken() {
   return data.access_token;
 }
 
+async function getGuestQueue() {
+  try {
+    const { blobs } = await list({ prefix: "guestqueue/" });
+    const items = await Promise.all(blobs.map(async (b) => {
+      const r = await fetch(b.downloadUrl);
+      return r.json();
+    }));
+    // Sortera efter addedAt
+    return items.sort((a, b) => a.addedAt - b.addedAt);
+  } catch {
+    return [];
+  }
+}
+
+async function cleanExpiredQueue(queue) {
+  const now = Date.now();
+  for (const item of queue) {
+    // Ta bort låtar som borde ha spelats klart
+    if (now > item.addedAt + item.duration_ms + 30000) {
+      try {
+        const { blobs } = await list({ prefix: "guestqueue/" });
+        const blob = blobs.find(b => b.pathname === `guestqueue/${item.trackId}.json`);
+        if (blob) await del(blob.url);
+      } catch {}
+    }
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method === "POST") {
     try {
-      const { uri } = req.body;
+      const { uri, trackId, duration_ms } = req.body;
       const token = await getToken();
       const spotifyRes = await fetch("https://api.spotify.com/v1/me/player/queue?uri=" + encodeURIComponent(uri), {
         method: "POST",
@@ -34,6 +61,24 @@ export default async function handler(req, res) {
       if (!spotifyRes.ok) {
         return res.status(500).json({ error: "Spotify fel: " + spotifyRes.status + " " + text });
       }
+      // Spara i Blob
+      await put("guestqueue/" + trackId + ".json", JSON.stringify({
+        trackId,
+        duration_ms,
+        addedAt: Date.now(),
+      }), { access: "private", allowOverwrite: true });
+
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  } else if (req.method === "DELETE") {
+    // Ta bort en låt från gästkön
+    try {
+      const { trackId } = req.body;
+      const { blobs } = await list({ prefix: "guestqueue/" });
+      const blob = blobs.find(b => b.pathname === "guestqueue/" + trackId + ".json");
+      if (blob) await del(blob.url);
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -43,7 +88,12 @@ export default async function handler(req, res) {
       const token = await getToken();
       const type = req.query.type;
 
-      if (type === "playlist") {
+      if (type === "guestqueue") {
+        const queue = await getGuestQueue();
+        await cleanExpiredQueue(queue);
+        const freshQueue = await getGuestQueue();
+        return res.json(freshQueue);
+      } else if (type === "playlist") {
         let all = [];
         let url = "https://api.spotify.com/v1/playlists/" + process.env.SPOTIFY_PLAYLIST_ID + "/items?limit=50";
         while (url) {

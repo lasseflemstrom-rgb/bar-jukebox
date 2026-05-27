@@ -1,6 +1,8 @@
 
   
   
+
+  
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -26,11 +28,11 @@ async function apiGet(type) {
   return res.json();
 }
 
-async function apiAddToQueue(uri) {
+async function apiAddToQueue(uri, trackId, duration_ms) {
   const res = await fetch("/api/queue", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ uri }),
+    body: JSON.stringify({ uri, trackId, duration_ms }),
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
@@ -115,6 +117,7 @@ export default function Jukebox() {
   const [progressMs, setProgressMs] = useState(0);
   const [spotifyQueue, setSpotifyQueue] = useState([]);
   const [ourTrackIds, setOurTrackIds] = useState([]);
+  const [guestQueue, setGuestQueue] = useState([]); // Hämtas från Blob
   const [selected, setSelected] = useState(null);
   const [paymentStep, setPaymentStep] = useState(null);
   const [clientSecret, setClientSecret] = useState(null);
@@ -141,8 +144,6 @@ export default function Jukebox() {
           if (newSongId !== lastSongId.current) {
             lastSongId.current = newSongId;
             setProgressMs(playback.progress_ms || 0);
-            // Minska räknaren när en ny låt börjar (en köad låt spelades klart)
-            setGuestQueueCount(c => Math.max(0, c - 1));
           } else {
             setProgressMs((prev) => {
               const drift = Math.abs(prev - (playback.progress_ms || 0));
@@ -154,6 +155,10 @@ export default function Jukebox() {
         const queueData = await apiGet("queue");
         const fullQueue = queueData?.queue || [];
         setSpotifyQueue(fullQueue);
+
+        // Hämta gästkön från Blob
+        const gq = await apiGet("guestqueue");
+        setGuestQueue(gq || []);
       } catch {}
     };
     poll();
@@ -185,9 +190,8 @@ export default function Jukebox() {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Använd en enkel räknare för gästernas köade låtar
-  const [guestQueueCount, setGuestQueueCount] = useState(0);
-  const queueCount = guestQueueCount;
+  // Använd gästkön från Blob — alltid korrekt även vid sidomladdning
+  const queueCount = guestQueue.length;
   const queueFull = queueCount >= CONFIG.MAX_QUEUE_SIZE;
 
   const waitText = queueCount === 0
@@ -201,8 +205,7 @@ export default function Jukebox() {
     setSelected(track);
     if (testMode) {
       try {
-        await apiAddToQueue(track.uri);
-        setGuestQueueCount(c => c + 1);
+        await apiAddToQueue(track.uri, track.id, track.duration_ms);
         notify(`"${track.name}" är tillagd i jukebox!`);
         setPaymentStep("done");
       } catch {
@@ -220,7 +223,6 @@ export default function Jukebox() {
   };
 
   const handlePaymentSuccess = () => {
-    setGuestQueueCount(c => c + 1);
     notify(`"${selected.name}" är tillagd i jukebox!`);
     setPaymentStep("done");
     setClientSecret(null);
