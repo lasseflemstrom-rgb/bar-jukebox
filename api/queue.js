@@ -39,7 +39,7 @@ export default async function handler(req, res) {
         trackId,
         duration_ms,
         addedAt: Date.now(),
-      }), { access: "private", allowOverwrite: true });
+      }), { access: "public", allowOverwrite: true });
 
       console.log("Saved to blob:", blobResult.url);
       res.json({ success: true, blobUrl: blobResult.url });
