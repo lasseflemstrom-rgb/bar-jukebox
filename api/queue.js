@@ -34,15 +34,19 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: "Spotify fel: " + spotifyRes.status + " " + text });
       }
 
-      // Spara i Blob
-      const blobResult = await put("guestqueue/" + trackId + ".json", JSON.stringify({
-        trackId,
-        duration_ms,
-        addedAt: Date.now(),
-      }), { access: "public", allowOverwrite: true });
-
-      console.log("Saved to blob:", blobResult.url);
-      res.json({ success: true, blobUrl: blobResult.url });
+      // Spara i Blob (misslyckas tyst om det inte fungerar)
+try {
+  const blobResult = await put("guestqueue/" + trackId + ".json", JSON.stringify({
+    trackId,
+    duration_ms,
+    addedAt: Date.now(),
+  }), { access: "public", allowOverwrite: true });
+  console.log("Saved to blob:", blobResult.url);
+} catch (blobErr) {
+  console.log("Blob error (ignored):", blobErr.message);
+}
+        
+      res.json({ success: true, });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
