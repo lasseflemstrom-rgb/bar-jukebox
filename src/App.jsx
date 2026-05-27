@@ -157,7 +157,7 @@ export default function Jukebox() {
         setSpotifyQueue(fullQueue);
 
         // Hämta gästkön från Blob
-        const gq = await apiGet("guestqueue");
+       const gq = await fetch(`/api/queue?type=guestqueue${nowPlaying ? "&nowPlayingId=" + nowPlaying.id : ""}`).then(r => r.json());
         setGuestQueue(gq || []);
       } catch {}
     };
