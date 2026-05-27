@@ -1,7 +1,9 @@
+
+  
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
- 
+
 // ============================================================
 // KONFIGURATION
 // ============================================================
@@ -11,9 +13,9 @@ const CONFIG = {
   MAX_QUEUE_SIZE: 5,
   TEST_MODE: true,
 };
- 
+
 const stripePromise = loadStripe(CONFIG.STRIPE_PUBLISHABLE_KEY);
- 
+
 // ============================================================
 // API-ANROP TILL BACKEND
 // ============================================================
@@ -22,7 +24,7 @@ async function apiGet(type) {
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
- 
+
 async function apiAddToQueue(uri) {
   const res = await fetch("/api/queue", {
     method: "POST",
@@ -32,7 +34,7 @@ async function apiAddToQueue(uri) {
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
- 
+
 async function createPaymentIntent(amount, trackName, trackUri) {
   const res = await fetch("/api/payment", {
     method: "POST",
@@ -42,18 +44,18 @@ async function createPaymentIntent(amount, trackName, trackUri) {
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
- 
+
 const msToMin = (ms) =>
   `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
- 
+
 const formatWait = (ms) => {
   if (ms <= 0) return null;
   if (ms < 60000) return `~${Math.ceil(ms / 1000)}s`;
   return `~${Math.ceil(ms / 60000)} min`;
 };
- 
+
 const LOGO_SRC = "/Neon_Needle_logo.png";
- 
+
 // ============================================================
 // BETALNINGSFORMULÄR
 // ============================================================
@@ -62,7 +64,7 @@ function CheckoutForm({ track, onSuccess, onCancel, waitText }) {
   const elements = useElements();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
- 
+
   const handleSubmit = async () => {
     if (!stripe || !elements) return;
     setLoading(true);
@@ -80,7 +82,7 @@ function CheckoutForm({ track, onSuccess, onCancel, waitText }) {
       onSuccess();
     }
   };
- 
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={s.modalHeader}>BETALA & LÄGG TILL LÅT</div>
@@ -100,7 +102,7 @@ function CheckoutForm({ track, onSuccess, onCancel, waitText }) {
     </div>
   );
 }
- 
+
 // ============================================================
 // HUVUDAPP
 // ============================================================
@@ -120,14 +122,14 @@ export default function Jukebox() {
   const [testMode, setTestMode] = useState(CONFIG.TEST_MODE);
   const [backendError, setBackendError] = useState(null);
   const lastSongId = useRef(null);
- 
+
   // Ladda spellista från backend
   useEffect(() => {
     apiGet("playlist")
       .then((data) => { setTracks(data); setFiltered(data); setLoading(false); })
       .catch((err) => { setBackendError(err.message); setLoading(false); });
   }, []);
- 
+
   // Polla nuvarande låt och kö från backend
   useEffect(() => {
     const poll = async () => {
@@ -138,7 +140,6 @@ export default function Jukebox() {
           if (newSongId !== lastSongId.current) {
             lastSongId.current = newSongId;
             setProgressMs(playback.progress_ms || 0);
-            setOurTrackIds((ids) => ids.filter((id) => id !== newSongId));
           } else {
             setProgressMs((prev) => {
               const drift = Math.abs(prev - (playback.progress_ms || 0));
@@ -150,17 +151,13 @@ export default function Jukebox() {
         const queueData = await apiGet("queue");
         const fullQueue = queueData?.queue || [];
         setSpotifyQueue(fullQueue);
-        setOurTrackIds((ourIds) => {
-          const queueIds = fullQueue.map((t) => t.id);
-          return ourIds.filter((id) => queueIds.includes(id));
-        });
       } catch {}
     };
     poll();
     const id = setInterval(poll, 8000);
     return () => clearInterval(id);
   }, []);
- 
+
   // Smooth progress ticker
   useEffect(() => {
     if (!nowPlaying) return;
@@ -169,7 +166,7 @@ export default function Jukebox() {
     }, 1000);
     return () => clearInterval(id);
   }, [nowPlaying?.id]);
- 
+
   // Sökfilter
   useEffect(() => {
     if (!search.trim()) { setFiltered(tracks); return; }
@@ -179,24 +176,22 @@ export default function Jukebox() {
       t.artists.some((a) => a.name.toLowerCase().includes(q))
     ));
   }, [search, tracks]);
- 
-  
- 
+
   const notify = (msg, type = "success") => {
     setNotification({ msg, type });
     setTimeout(() => setNotification(null), 4000);
   };
- 
-  const ourQueueCount = ourTrackIds.length;
-  const queueFull = ourQueueCount >= CONFIG.MAX_QUEUE_SIZE;
- 
-  // Låtar FÖRE din (för modalen efter köp) = nuvarande låt + köade låtar före din
-  const waitText = ourQueueCount === 0
+
+  // Använd Spotify-köns faktiska längd direkt
+  const queueCount = spotifyQueue.length;
+  const queueFull = queueCount >= CONFIG.MAX_QUEUE_SIZE;
+
+  const waitText = queueCount === 0
     ? "⚡ Näst i kön!"
-    : ourQueueCount === 1
+    : queueCount === 1
     ? "🎵 1 låt före dig"
-    : `🎵 ${ourQueueCount} låtar före dig`;
- 
+    : `🎵 ${queueCount} låtar före dig`;
+
   const handleSelectSong = async (track) => {
     if (queueFull) { setSelected(track); setPaymentStep("full"); return; }
     setSelected(track);
@@ -220,16 +215,16 @@ export default function Jukebox() {
       }
     }
   };
- 
+
   const handlePaymentSuccess = () => {
     setOurTrackIds((ids) => [...ids, selected.id]);
     notify(`"${selected.name}" är tillagd i jukebox!`);
     setPaymentStep("done");
     setClientSecret(null);
   };
- 
+
   const handleClose = () => { setSelected(null); setPaymentStep(null); setClientSecret(null); };
- 
+
   // ============================================================
   // RENDER
   // ============================================================
@@ -239,25 +234,25 @@ export default function Jukebox() {
       <div style={s.app}>
         <div style={s.bubbleLeft} />
         <div style={s.bubbleRight} />
- 
+
         {testMode && (
           <div style={s.testRibbon}>
             🧪 TESTLÄGE — INGEN BETALNING
             <button style={s.testBtn} onClick={() => setTestMode(false)}>Aktivera Betalning</button>
           </div>
         )}
- 
+
         <header style={s.header}>
           <div style={s.headerInner}>
             <div style={s.headerLogoWrap}>
               <img
                 src={LOGO_SRC}
-                alt="MUSIKMASKINEN Jukebox"
+                alt="Neon Needle Jukebox"
                 style={s.headerLogo}
                 onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "block"; }}
               />
               <div style={{ display: "none" }}>
-                <div style={s.fallbackNeonSmall}>MUSIKMASKINEN</div>
+                <div style={s.fallbackNeonSmall}>NEON NEEDLE</div>
                 <div style={s.fallbackSubSmall}>JUKEBOX</div>
               </div>
             </div>
@@ -278,26 +273,26 @@ export default function Jukebox() {
             )}
           </div>
         </header>
- 
+
         <div style={s.queueStrip}>
           <div style={s.queueStripInner}>
             {queueFull ? (
               <span style={{ color: "#fca5a5" }}>⛔ Kön är full — prova igen snart!</span>
-            ) : ourQueueCount > 0 ? (
-              <span>🎵 {ourQueueCount + 1} låtar i kön</span>
+            ) : queueCount > 0 ? (
+              <span>🎵 {queueCount + 1} låtar i kön</span>
             ) : (
-              <span>🎶 Kön är tom — välj nästa låt!</span>
+              <span>🎶 Kön är tom — var den första att välja!</span>
             )}
             {!testMode && <span style={s.queuePrice}>{CONFIG.PRICE_PER_SONG} kr / låt</span>}
           </div>
         </div>
- 
+
         {notification && (
           <div style={{ ...s.toast, background: notification.type === "error" ? "#7f1d1d" : "#14532d", borderColor: notification.type === "error" ? "#ef4444" : "#22c55e" }}>
             {notification.msg}
           </div>
         )}
- 
+
         <div style={s.searchSection}>
           <div style={s.searchBox}>
             <span style={s.searchNote}>🎵</span>
@@ -310,7 +305,7 @@ export default function Jukebox() {
             {search && <button style={s.clearBtn} onClick={() => setSearch("")}>✕</button>}
           </div>
         </div>
- 
+
         <div style={s.trackList}>
           {loading && <div style={s.emptyMsg}>Laddar spellista...</div>}
           {backendError && (
@@ -339,14 +334,14 @@ export default function Jukebox() {
             </div>
           ))}
         </div>
- 
+
         <footer style={s.footer}>
           <div style={s.footerInner}>
             <span style={s.footerText}>Musik via</span>
             <SpotifyLogoWhiteSmall />
           </div>
         </footer>
- 
+
         {/* Betalningsmodal med Stripe */}
         {selected && paymentStep === "pay" && clientSecret && (
           <div style={s.overlay} onClick={handleClose}>
@@ -362,7 +357,7 @@ export default function Jukebox() {
             </div>
           </div>
         )}
- 
+
         {/* Kön full modal */}
         {paymentStep === "full" && (
           <div style={s.overlay} onClick={handleClose}>
@@ -376,7 +371,7 @@ export default function Jukebox() {
             </div>
           </div>
         )}
- 
+
         {/* Bekräftelse */}
         {paymentStep === "done" && (
           <div style={s.overlay} onClick={handleClose}>
@@ -395,7 +390,7 @@ export default function Jukebox() {
     </>
   );
 }
- 
+
 // ============================================================
 // SPOTIFY SVG
 // ============================================================
@@ -407,7 +402,7 @@ function SpotifyLogoWhiteSmall() {
     </svg>
   );
 }
- 
+
 // ============================================================
 // GLOBALA STILAR
 // ============================================================
@@ -420,14 +415,14 @@ const globalStyles = `
   @keyframes bubbleFloat { 0%, 100% { transform: translateY(0px) scale(1); } 50% { transform: translateY(-20px) scale(1.02); } }
   @keyframes neonPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
 `;
- 
+
 const cream = "#f5e6c8";
 const red = "#c41e1e";
 const darkRed = "#7a0000";
 const chrome = "#e8d5a3";
 const warmBlack = "#1a0a00";
 const amber = "#ff6b35";
- 
+
 const s = {
   app: { minHeight: "100vh", background: cream, fontFamily: "'Lato', sans-serif", position: "relative", overflowX: "hidden", paddingBottom: 60 },
   bubbleLeft: { position: "fixed", left: -60, top: "20%", width: 120, height: 300, background: `linear-gradient(180deg, ${red}30, ${amber}20, ${red}30)`, borderRadius: "0 60px 60px 0", pointerEvents: "none", animation: "bubbleFloat 4s ease-in-out infinite", zIndex: 0 },
@@ -437,7 +432,7 @@ const s = {
   header: { background: `linear-gradient(180deg, ${darkRed} 0%, ${red} 100%)`, borderBottom: `4px solid ${chrome}`, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" },
   headerInner: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 16px", gap: 12 },
   headerLogoWrap: { flexShrink: 0 },
-  headerLogo: { height: 72, width: "auto", display: "block", filter: "drop-shadow(0 0 8px rgba(255,107,53,0.5))", animation: "neonPulse 3s ease-in-out infinite", mixBlendMode: "screen" },
+  headerLogo: { height: 72, width: "auto", display: "block", filter: "drop-shadow(0 0 8px rgba(255,107,53,0.5))", animation: "neonPulse 3s ease-in-out infinite", mixBlendMode: "lighten" },
   fallbackNeonSmall: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: "#ff3b3b", letterSpacing: 3, textShadow: "0 0 10px #ff3b3b" },
   fallbackSubSmall: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 9, color: chrome, letterSpacing: 5, opacity: 0.7 },
   nowPlaying: { display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.25)", border: `1px solid ${chrome}40`, borderRadius: 8, padding: "8px 12px", maxWidth: 220, flex: 1 },
@@ -483,4 +478,3 @@ const s = {
   modalGhost: { background: "transparent", color: "#999", border: `1px solid ${chrome}`, borderRadius: 50, padding: "10px 24px", fontSize: 13, fontFamily: "'Lato', sans-serif", cursor: "pointer" },
   successIcon: { fontSize: 56 },
 };
- 
