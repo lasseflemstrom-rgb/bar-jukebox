@@ -437,7 +437,7 @@ const s = {
   header: { background: `linear-gradient(180deg, ${darkRed} 0%, ${red} 100%)`, borderBottom: `4px solid ${chrome}`, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" },
   headerInner: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 16px", gap: 12 },
   headerLogoWrap: { flexShrink: 0 },
- headerLogo: { height: 72, width: "auto", display: "block", filter: "drop-shadow(0 0 8px rgba(255,107,53,0.5))", animation: "neonPulse 3s ease-in-out infinite", backgroundColor: "#b01515", padding: 2 },
+ headerLogo: { height: 72, width: "auto", display: "block", filter: "drop-shadow(0 0 8px rgba(255,107,53,0.5))", animation: "neonPulse 3s ease-in-out infinite", backgroundColor: "#b81818", padding: 2 },
   fallbackNeonSmall: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: "#ff3b3b", letterSpacing: 3, textShadow: "0 0 10px #ff3b3b" },
   fallbackSubSmall: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 9, color: chrome, letterSpacing: 5, opacity: 0.7 },
   nowPlaying: { display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.25)", border: `1px solid ${chrome}40`, borderRadius: 8, padding: "8px 12px", maxWidth: 220, flex: 1 },
