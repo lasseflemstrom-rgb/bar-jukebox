@@ -1,6 +1,17 @@
-// Global kö i minnet (nollställs vid serveromstart men fungerar i praktiken)
-const guestQueue = [];
-const MAX_QUEUE = 5;
+import { neon } from "@neondatabase/serverless";
+
+async function getDb() {
+  const sql = neon(process.env.DATABASE_URL);
+  // Skapa tabellen om den inte finns
+  await sql`
+    CREATE TABLE IF NOT EXISTS guest_queue (
+      track_id TEXT PRIMARY KEY,
+      duration_ms INTEGER NOT NULL,
+      added_at BIGINT NOT NULL
+    )
+  `;
+  return sql;
+}
 
 async function getToken() {
   const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
@@ -20,19 +31,6 @@ async function getToken() {
   return data.access_token;
 }
 
-function cleanQueue() {
-  const now = Date.now();
-  const before = guestQueue.length;
-  while (guestQueue.length > 0) {
-    const item = guestQueue[0];
-    if (now > item.addedAt + item.duration_ms + 30000) {
-      guestQueue.shift();
-    } else {
-      break;
-    }
-  }
-}
-
 export default async function handler(req, res) {
   if (req.method === "POST") {
     const { uri, trackId, duration_ms } = req.body;
@@ -46,10 +44,20 @@ export default async function handler(req, res) {
         const text = await spotifyRes.text();
         return res.status(500).json({ error: "Spotify: " + spotifyRes.status + " " + text });
       }
-      // Spara i kön
-      cleanQueue();
-      guestQueue.push({ trackId, duration_ms, addedAt: Date.now() });
-      return res.json({ success: true, queueLength: guestQueue.length });
+      // Spara i databasen
+      if (trackId && duration_ms) {
+        try {
+          const sql = await getDb();
+          await sql`
+            INSERT INTO guest_queue (track_id, duration_ms, added_at)
+            VALUES (${trackId}, ${duration_ms}, ${Date.now()})
+            ON CONFLICT (track_id) DO UPDATE SET added_at = ${Date.now()}
+          `;
+        } catch (dbErr) {
+          console.log("DB error:", dbErr.message);
+        }
+      }
+      return res.json({ success: true });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
@@ -58,8 +66,22 @@ export default async function handler(req, res) {
     const type = req.query.type;
 
     if (type === "guestqueue") {
-      cleanQueue();
-      return res.json(guestQueue);
+      try {
+        const sql = await getDb();
+        const now = Date.now();
+        // Ta bort utgångna låtar
+        await sql`DELETE FROM guest_queue WHERE added_at + duration_ms + 30000 < ${now}`;
+        // Hämta kvarvarande
+        const rows = await sql`SELECT * FROM guest_queue ORDER BY added_at ASC`;
+        return res.json(rows.map(r => ({
+          trackId: r.track_id,
+          duration_ms: r.duration_ms,
+          addedAt: parseInt(r.added_at),
+        })));
+      } catch (err) {
+        console.log("DB error:", err.message);
+        return res.json([]);
+      }
     }
 
     try {
