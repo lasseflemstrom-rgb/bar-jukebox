@@ -1,4 +1,6 @@
-import { list, put, del } from "@vercel/blob";
+// Global kö i minnet (nollställs vid serveromstart men fungerar i praktiken)
+const guestQueue = [];
+const MAX_QUEUE = 5;
 
 async function getToken() {
   const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
@@ -18,11 +20,23 @@ async function getToken() {
   return data.access_token;
 }
 
+function cleanQueue() {
+  const now = Date.now();
+  const before = guestQueue.length;
+  while (guestQueue.length > 0) {
+    const item = guestQueue[0];
+    if (now > item.addedAt + item.duration_ms + 30000) {
+      guestQueue.shift();
+    } else {
+      break;
+    }
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method === "POST") {
     const { uri, trackId, duration_ms } = req.body;
     try {
-      // Lägg till i Spotify
       const token = await getToken();
       const spotifyRes = await fetch("https://api.spotify.com/v1/me/player/queue?uri=" + encodeURIComponent(uri), {
         method: "POST",
@@ -32,50 +46,20 @@ export default async function handler(req, res) {
         const text = await spotifyRes.text();
         return res.status(500).json({ error: "Spotify: " + spotifyRes.status + " " + text });
       }
+      // Spara i kön
+      cleanQueue();
+      guestQueue.push({ trackId, duration_ms, addedAt: Date.now() });
+      return res.json({ success: true, queueLength: guestQueue.length });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
-
-    // Spara i Blob (separat try så Spotify-fel inte påverkar)
-    if (trackId && duration_ms) {
-      try {
-        await put("guestqueue/" + trackId + ".json", JSON.stringify({
-          trackId,
-          duration_ms,
-          addedAt: Date.now(),
-        }), { access: "public", allowOverwrite: true });
-      } catch (blobErr) {
-        console.log("Blob sparning misslyckades:", blobErr.message);
-      }
-    }
-
-    return res.json({ success: true });
 
   } else if (req.method === "GET") {
     const type = req.query.type;
 
     if (type === "guestqueue") {
-      try {
-        const allBlobs = await list();
-        const guestBlobs = allBlobs.blobs.filter(b => b.pathname.startsWith("guestqueue/"));
-        const now = Date.now();
-        const items = [];
-        for (const b of guestBlobs) {
-          try {
-            const r = await fetch(b.url);
-            const item = await r.json();
-            if (now < item.addedAt + item.duration_ms + 30000) {
-              items.push(item);
-            } else {
-              await del(b.url);
-            }
-          } catch {}
-        }
-        items.sort((a, b) => a.addedAt - b.addedAt);
-        return res.json(items);
-      } catch (err) {
-        return res.json([]);
-      }
+      cleanQueue();
+      return res.json(guestQueue);
     }
 
     try {
