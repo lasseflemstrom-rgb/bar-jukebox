@@ -1,5 +1,6 @@
 
   
+  
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -140,6 +141,8 @@ export default function Jukebox() {
           if (newSongId !== lastSongId.current) {
             lastSongId.current = newSongId;
             setProgressMs(playback.progress_ms || 0);
+            // Minska räknaren när en ny låt börjar (en köad låt spelades klart)
+            setGuestQueueCount(c => Math.max(0, c - 1));
           } else {
             setProgressMs((prev) => {
               const drift = Math.abs(prev - (playback.progress_ms || 0));
@@ -182,8 +185,9 @@ export default function Jukebox() {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Använd Spotify-köns faktiska längd direkt
-  const queueCount = spotifyQueue.length;
+  // Använd en enkel räknare för gästernas köade låtar
+  const [guestQueueCount, setGuestQueueCount] = useState(0);
+  const queueCount = guestQueueCount;
   const queueFull = queueCount >= CONFIG.MAX_QUEUE_SIZE;
 
   const waitText = queueCount === 0
@@ -198,14 +202,13 @@ export default function Jukebox() {
     if (testMode) {
       try {
         await apiAddToQueue(track.uri);
-        setOurTrackIds((ids) => [...ids, track.id]);
+        setGuestQueueCount(c => c + 1);
         notify(`"${track.name}" är tillagd i jukebox!`);
         setPaymentStep("done");
       } catch {
         notify("Kunde inte lägga till låten. Är Spotify igång?", "error");
       }
     } else {
-      // Skapa Stripe Payment Intent
       try {
         const { clientSecret: secret } = await createPaymentIntent(CONFIG.PRICE_PER_SONG, track.name, track.uri);
         setClientSecret(secret);
@@ -217,7 +220,7 @@ export default function Jukebox() {
   };
 
   const handlePaymentSuccess = () => {
-    setOurTrackIds((ids) => [...ids, selected.id]);
+    setGuestQueueCount(c => c + 1);
     notify(`"${selected.name}" är tillagd i jukebox!`);
     setPaymentStep("done");
     setClientSecret(null);
