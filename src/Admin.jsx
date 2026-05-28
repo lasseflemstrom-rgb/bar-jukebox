@@ -298,11 +298,6 @@ const s = {
   header: { background: darkRed, borderBottom: `3px solid ${chrome}`, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" },
   headerTitle: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: cream, letterSpacing: 3 },
   jukeboxToggle: {},
-  {jukeboxActive ? (
-  <button style={s.btnStop} onClick={handleStopJukebox}>⏹ Stäng av jukebox-läge</button>
-) : (
-  <button style={s.btnStart} onClick={handleStartJukebox}>▶ Starta jukebox-läge</button>
-)}
   grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, padding: 16, maxWidth: 900, margin: "0 auto" },
   card: { background: "#2a2a2a", borderRadius: 12, padding: 20, border: "1px solid #444" },
   cardTitle: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: chrome, letterSpacing: 3, marginBottom: 16 },
