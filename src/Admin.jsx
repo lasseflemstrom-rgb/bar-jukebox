@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 // ADMIN PIN — ändra detta till ett eget lösenord
 // ============================================================
 const ADMIN_PIN = "1234";
-const TRIGGER_SECONDS = 10; // Sekunder kvar när nästa låt köas
+const TRIGGER_SECONDS = 30; // Sekunder kvar när nästa låt köas
 
 // ============================================================
 // API-HJÄLPARE
