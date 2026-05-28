@@ -96,8 +96,10 @@ export default function Admin() {
 
   // Trigger nästa låt
   useEffect(() => {
-    if (!jukeboxActive || !nowPlaying || nextQueued) return;
+   if (!jukeboxActive || !nowPlaying || nextQueued) return;
     const remaining = nowPlaying.duration_ms - progressMs;
+    console.log("Remaining:", remaining, "Queue:", queue.length, "Active:", jukeboxActive, "NextQueued:", nextQueued); 
+
     if (remaining <= TRIGGER_SECONDS * 1000 && queue.length > 0) {
       setNextQueued(true);
       adminPost({ action: "addNextToSpotify" }).then(result => {
