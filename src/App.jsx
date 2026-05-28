@@ -1,7 +1,6 @@
 
-  
-  
 
+  
   
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
@@ -28,13 +27,23 @@ async function apiGet(type) {
   return res.json();
 }
 
-async function apiAddToQueue(uri, trackId, duration_ms) {
+async function apiAddToQueue(uri, trackId, duration_ms, trackName, artistName) {
   const res = await fetch("/api/queue", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ uri, trackId, duration_ms }),
+    body: JSON.stringify({ uri, trackId, duration_ms, trackName, artistName }),
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
+
+async function checkTrack(trackId) {
+  const res = await fetch("/api/check-track", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ trackId }),
+  });
+  if (!res.ok) return { blocked: false };
   return res.json();
 }
 
@@ -157,7 +166,7 @@ export default function Jukebox() {
         setSpotifyQueue(fullQueue);
 
         // Hämta gästkön från Blob
-       const gq = await fetch(`/api/queue?type=guestqueue${nowPlaying ? "&nowPlayingId=" + nowPlaying.id : ""}`).then(r => r.json());
+        const gq = await apiGet("guestqueue");
         setGuestQueue(gq || []);
       } catch {}
     };
@@ -202,10 +211,25 @@ export default function Jukebox() {
 
   const handleSelectSong = async (track) => {
     if (queueFull) { setSelected(track); setPaymentStep("full"); return; }
+
+    // Kolla dubbletter
+    const artistName = track.artists.map(a => a.name).join(", ");
+    const check = await checkTrack(track.id);
+    if (check.blocked) {
+      if (check.reason === "inQueue") {
+        setSelected(track);
+        setPaymentStep("inQueue");
+      } else {
+        setSelected(track);
+        setPaymentStep("recentlyPlayed");
+      }
+      return;
+    }
+
     setSelected(track);
     if (testMode) {
       try {
-        await apiAddToQueue(track.uri, track.id, track.duration_ms);
+        await apiAddToQueue(track.uri, track.id, track.duration_ms, track.name, artistName);
         notify(`"${track.name}" är tillagd i jukebox!`);
         setPaymentStep("done");
       } catch {
@@ -359,6 +383,36 @@ export default function Jukebox() {
                   waitText={waitText}
                 />
               </Elements>
+            </div>
+          </div>
+        )}
+
+        {/* Låten är redan i kön */}
+        {paymentStep === "inQueue" && (
+          <div style={s.overlay} onClick={handleClose}>
+            <div style={s.modal} onClick={e => e.stopPropagation()}>
+              <div style={{ fontSize: 56 }}>⏳</div>
+              <div style={s.modalHeader}>REDAN I KÖN</div>
+              <div style={s.modalTitle}>{selected?.name}</div>
+              <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.5 }}>
+                Den här låten väntar redan på att spelas. Välj en annan låt!
+              </p>
+              <button style={s.modalPrimary} onClick={handleClose}>Välj annan låt</button>
+            </div>
+          </div>
+        )}
+
+        {/* Låten spelades nyligen */}
+        {paymentStep === "recentlyPlayed" && (
+          <div style={s.overlay} onClick={handleClose}>
+            <div style={s.modal} onClick={e => e.stopPropagation()}>
+              <div style={{ fontSize: 56 }}>🔁</div>
+              <div style={s.modalHeader}>SPELADES NYLIGEN</div>
+              <div style={s.modalTitle}>{selected?.name}</div>
+              <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.5 }}>
+                Den här låten spelades för mindre än 45 minuter sedan. Välj en annan låt!
+              </p>
+              <button style={s.modalPrimary} onClick={handleClose}>Välj annan låt</button>
             </div>
           </div>
         )}
