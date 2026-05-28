@@ -42,13 +42,21 @@ async function getToken() {
 export default async function handler(req, res) {
   await initDb();
 
-  if (req.method === "POST") {
-    const { uri, trackId, duration_ms, trackName, artistName } = req.body;
+if (req.method === "POST") {
+    const { trackId, duration_ms, trackName, artistName } = req.body;
     try {
-      const token = await getToken();
-      const spotifyRes = await fetch("https://api.spotify.com/v1/me/player/queue?uri=" + encodeURIComponent(uri), {
-        method: "POST",
-        headers: { Authorization: "Bearer " + token },
+      if (trackId && duration_ms) {
+        await sql`
+          INSERT INTO guest_queue (track_id, track_name, artist_name, duration_ms, added_at)
+          VALUES (${trackId}, ${trackName || ""}, ${artistName || ""}, ${duration_ms}, ${Date.now()})
+          ON CONFLICT (track_id) DO UPDATE SET added_at = ${Date.now()}
+        `;
+      }
+      return res.json({ success: true });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
       });
       if (!spotifyRes.ok) {
         const text = await spotifyRes.text();
