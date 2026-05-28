@@ -1,8 +1,6 @@
 
-
   
-  
-import { useState, useEffect, useRef } from "react";
+  import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -90,7 +88,8 @@ function CheckoutForm({ track, onSuccess, onCancel, waitText }) {
       setError(stripeError.message);
       setLoading(false);
     } else {
-      await apiAddToQueue(track.uri, track.id, track.duration_ms, track.name, track.artists.map(a => a.name).join(", "));
+      await apiAddToQueue(track.uri);
+      onSuccess();
     }
   };
 
@@ -202,6 +201,11 @@ export default function Jukebox() {
   const queueCount = guestQueue.length;
   const queueFull = queueCount >= CONFIG.MAX_QUEUE_SIZE;
 
+  // Beräkna total väntetid
+  const totalWaitMs = guestQueue.reduce((sum, t) => sum + (t.duration_ms || 0), 0) +
+    (nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0);
+  const waitMinutes = Math.ceil(totalWaitMs / 60000);
+
   const waitText = queueCount === 0
     ? "⚡ Näst i kön!"
     : queueCount === 1
@@ -307,9 +311,9 @@ export default function Jukebox() {
             {queueFull ? (
               <span style={{ color: "#fca5a5" }}>⛔ Kön är full — prova igen snart!</span>
             ) : queueCount > 0 ? (
-              <span>🎵 {queueCount + 1} låtar i kön</span>
+              <span>⏱ Ca {waitMinutes} min väntetid · {queueCount} låt{queueCount > 1 ? "ar" : ""} i kön</span>
             ) : (
-              <span>🎶 Kön är tom — var den första att välja!</span>
+              <span>🎵 Välj nästa låt — kön är tom!</span>
             )}
             {!testMode && <span style={s.queuePrice}>{CONFIG.PRICE_PER_SONG} kr / låt</span>}
           </div>
