@@ -160,7 +160,7 @@ if (!jukeboxActive || !nowPlaying || nextQueued) return;
       <div style={s.loginWrap}>
         <div style={s.loginBox}>
           <div style={s.loginTitle}>🎵 ADMIN</div>
-          <div style={s.loginSub}>Neon Needle Jukebox</div>
+          <div style={s.loginSub}>MusikMaskinen Jukebox</div>
           <input
             style={{ ...s.pinInput, borderColor: pinError ? "#ef4444" : "#e8d5a3" }}
             type="password"
@@ -182,7 +182,7 @@ if (!jukeboxActive || !nowPlaying || nextQueued) return;
   return (
     <div style={s.app}>
       <header style={s.header}>
-        <div style={s.headerTitle}>🎵 NEON NEEDLE — ADMIN</div>
+        <div style={s.headerTitle}>🎵 MUSIKMASKINEN — ADMIN</div>
         <div style={s.jukeboxToggle}>
           {jukeboxActive ? (
             <button style={s.btnStop} onClick={handleStopJukebox}>⏹ Stäng av jukebox-läge</button>
