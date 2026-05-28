@@ -96,7 +96,8 @@ export default function Admin() {
 
   // Trigger nästa låt
   useEffect(() => {
-   if (!jukeboxActive || !nowPlaying || nextQueued) return;
+   console.log("Effect check:", { jukeboxActive, nowPlaying: !!nowPlaying, nextQueued });
+if (!jukeboxActive || !nowPlaying || nextQueued) return;
     const remaining = nowPlaying.duration_ms - progressMs;
     console.log("Remaining:", remaining, "Queue:", queue.length, "Active:", jukeboxActive, "NextQueued:", nextQueued); 
 
