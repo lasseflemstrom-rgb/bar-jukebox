@@ -90,8 +90,7 @@ function CheckoutForm({ track, onSuccess, onCancel, waitText }) {
       setError(stripeError.message);
       setLoading(false);
     } else {
-      await apiAddToQueue(track.uri);
-      onSuccess();
+      await apiAddToQueue(track.uri, track.id, track.duration_ms, track.name, track.artists.map(a => a.name).join(", "));
     }
   };
 
