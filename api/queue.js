@@ -27,6 +27,25 @@ async function getToken() {
   return data.access_token;
 }
 
+async function scheduleNextCron(delayMs) {
+  // Schemalägg QStash att anropa /api/cron om delayMs millisekunder
+  const delaySeconds = Math.max(5, Math.floor(delayMs / 1000));
+  try {
+    await fetch("https://qstash.upstash.io/v2/publish/https://bar-jukebox.vercel.app/api/cron", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + process.env.QSTASH_TOKEN,
+        "Content-Type": "application/json",
+        "Upstash-Delay": delaySeconds + "s",
+      },
+      body: JSON.stringify({}),
+    });
+    console.log("Schemalade cron om", delaySeconds, "sekunder");
+  } catch (err) {
+    console.log("QStash schemaläggning misslyckades:", err.message);
+  }
+}
+
 export default async function handler(req, res) {
   await initDb();
 
@@ -39,6 +58,32 @@ export default async function handler(req, res) {
           VALUES (${trackId}, ${trackName || ""}, ${artistName || ""}, ${duration_ms}, ${Date.now()})
           ON CONFLICT (track_id) DO UPDATE SET added_at = ${Date.now()}
         `;
+
+        // Hämta hur lång tid kvar på nuvarande låt
+        try {
+          const token = await getToken();
+          const playbackRes = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
+            headers: { Authorization: "Bearer " + token },
+          });
+          if (playbackRes.ok && playbackRes.status !== 204) {
+            const playback = await playbackRes.json();
+            if (playback?.item) {
+              const remaining = playback.item.duration_ms - (playback.progress_ms || 0);
+
+              // Kolla hur många låtar som är i kön redan
+              const queueRows = await sql`SELECT COUNT(*) as count FROM guest_queue`;
+              const queueSize = parseInt(queueRows[0].count);
+
+              // Schemalägg cron när det är dags för just den här låten
+              // Om det är den enda låten: remaining - 20 sek
+              // Om det finns fler: remaining + (queueSize-1) * genomsnittlig låtlängd - 20 sek
+              const delay = Math.max(5000, remaining - 20000);
+              await scheduleNextCron(delay);
+            }
+          }
+        } catch (err) {
+          console.log("Kunde inte schemalägga:", err.message);
+        }
       }
       return res.json({ success: true });
     } catch (err) {

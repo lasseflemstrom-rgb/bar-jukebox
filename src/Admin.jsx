@@ -36,6 +36,7 @@ export default function Admin() {
   const [pinError, setPinError] = useState(false);
 
   const [queue, setQueue] = useState([]);
+  const [queueOpen, setQueueOpen] = useState(true);
   const [nowPlaying, setNowPlaying] = useState(null);
   const [progressMs, setProgressMs] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -69,6 +70,9 @@ export default function Admin() {
 
         const q = await adminGet("queue");
         setQueue(q);
+
+        const settings = await adminGet("settings");
+        setQueueOpen(settings.queue_open !== "false");
       } catch {}
     };
 
@@ -117,6 +121,18 @@ export default function Admin() {
     setQueue(q => q.filter(t => t.track_id !== trackId));
     addLog(`🗑 Tog bort: ${trackName}`);
   };
+  const handleOpenQueue = () => {
+    adminPost({ action: "openQueue" });
+    setQueueOpen(true);
+    addLog("🟢 Kön öppnad");
+  };
+  const handleCloseQueue = () => {
+    if (confirm("Stäng kön? Gäster kan inte längre köpa låtar.")) {
+      adminPost({ action: "closeQueue" });
+      setQueueOpen(false);
+      addLog("🔒 Kön stängd");
+    }
+  };
 
   const progressPct = nowPlaying ? (progressMs / nowPlaying.duration_ms) * 100 : 0;
   const remaining = nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0;
@@ -152,7 +168,16 @@ export default function Admin() {
     <div style={s.app}>
       <header style={s.header}>
         <div style={s.headerTitle}>🎵 MUSIKMASKINEN — ADMIN</div>
-        <div style={{ color: "#86efac", fontSize: 13, fontWeight: 700 }}>🟢 AUTO-KÖ AKTIV</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {queueOpen ? (
+            <button style={s.btnStop} onClick={handleCloseQueue}>🔒 Stäng kön</button>
+          ) : (
+            <button style={s.btnStart} onClick={handleOpenQueue}>🟢 Öppna kön</button>
+          )}
+          <div style={{ color: queueOpen ? "#86efac" : "#fca5a5", fontSize: 13, fontWeight: 700 }}>
+            {queueOpen ? "🟢 AUTO-KÖ AKTIV" : "🔒 KÖN STÄNGD"}
+          </div>
+        </div>
       </header>
 
       <div style={s.grid}>

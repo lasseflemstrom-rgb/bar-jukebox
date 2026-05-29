@@ -1,10 +1,7 @@
 
+ 
   
-
-
-  
-  
-import { useState, useEffect, useRef } from "react";
+  import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -129,7 +126,8 @@ export default function Jukebox() {
   const [spotifyQueue, setSpotifyQueue] = useState([]);
   const [waitMinutesAtPurchase, setWaitMinutesAtPurchase] = useState(0);
   const waitMinutesAtPurchaseRef = useRef(0);
-  const [guestQueue, setGuestQueue] = useState([]); // Hämtas från Blob
+  const [guestQueue, setGuestQueue] = useState([]);
+  const [queueOpen, setQueueOpen] = useState(true); // Hämtas från Blob
   const [selected, setSelected] = useState(null);
   const [paymentStep, setPaymentStep] = useState(null);
   const [clientSecret, setClientSecret] = useState(null);
@@ -168,9 +166,13 @@ export default function Jukebox() {
         const fullQueue = queueData?.queue || [];
         setSpotifyQueue(fullQueue);
 
-        // Hämta gästkön från Blob
+        // Hämta gästkön från databasen
         const gq = await apiGet("guestqueue");
         setGuestQueue(gq || []);
+
+        // Hämta om kön är öppen
+        const settings = await fetch("/api/admin?type=settings").then(r => r.json()).catch(() => ({}));
+        setQueueOpen(settings.queue_open !== "false");
       } catch {}
     };
     poll();
@@ -218,6 +220,7 @@ export default function Jukebox() {
     : `🎵 ${queueCount} låtar före dig`;
 
   const handleSelectSong = async (track) => {
+    if (!queueOpen) { notify("Kön är stängd för ikväll.", "error"); return; }
     if (queueFull) { setSelected(track); setPaymentStep("full"); return; }
 
     // Kolla dubbletter
@@ -315,14 +318,16 @@ export default function Jukebox() {
 
         <div style={s.queueStrip}>
           <div style={s.queueStripInner}>
-            {queueFull ? (
+            {!queueOpen ? (
+              <span style={{ color: "#fca5a5" }}>🔒 Kön är stängd för ikväll</span>
+            ) : queueFull ? (
               <span style={{ color: "#fca5a5" }}>⛔ Kön är full — prova igen snart!</span>
             ) : queueCount > 0 ? (
               <span>⏱ Ca {waitMinutes} min väntetid · {queueCount} låt{queueCount > 1 ? "ar" : ""} i kön</span>
             ) : (
               <span>🎵 Välj nästa låt — kön är tom!</span>
             )}
-            {!testMode && <span style={s.queuePrice}>{CONFIG.PRICE_PER_SONG} kr / låt</span>}
+            {!testMode && queueOpen && <span style={s.queuePrice}>{CONFIG.PRICE_PER_SONG} kr / låt</span>}
           </div>
         </div>
 

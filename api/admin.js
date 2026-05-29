@@ -5,8 +5,8 @@ const sql = neon(process.env.DATABASE_URL);
 async function initDb() {
   await sql`CREATE TABLE IF NOT EXISTS guest_queue (track_id TEXT PRIMARY KEY, track_name TEXT, artist_name TEXT, duration_ms INTEGER NOT NULL, added_at BIGINT NOT NULL)`;
   await sql`CREATE TABLE IF NOT EXISTS recently_played (track_id TEXT PRIMARY KEY, track_name TEXT, played_at BIGINT NOT NULL)`;
-  await sql`ALTER TABLE guest_queue ADD COLUMN IF NOT EXISTS track_name TEXT`;
-  await sql`ALTER TABLE guest_queue ADD COLUMN IF NOT EXISTS artist_name TEXT`;
+  await sql`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`;
+  await sql`INSERT INTO settings (key, value) VALUES ('queue_open', 'true') ON CONFLICT (key) DO NOTHING`;
 }
 
 async function getToken() {
@@ -29,15 +29,24 @@ async function getToken() {
 
 export default async function handler(req, res) {
   await initDb();
-  const token = await getToken();
 
   if (req.method === "GET") {
     const type = req.query.type;
+
     if (type === "queue") {
       const rows = await sql`SELECT * FROM guest_queue ORDER BY added_at ASC`;
       return res.json(rows);
     }
+
+    if (type === "settings") {
+      const rows = await sql`SELECT * FROM settings`;
+      const settings = {};
+      rows.forEach(r => settings[r.key] = r.value);
+      return res.json(settings);
+    }
+
     if (type === "playing") {
+      const token = await getToken();
       const r = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
         headers: { Authorization: "Bearer " + token },
       });
@@ -48,6 +57,8 @@ export default async function handler(req, res) {
 
   if (req.method === "POST") {
     const { action, trackId } = req.body;
+    const token = await getToken();
+
     if (action === "play") {
       await fetch("https://api.spotify.com/v1/me/player/play", { method: "PUT", headers: { Authorization: "Bearer " + token } });
       return res.json({ success: true });
@@ -78,6 +89,14 @@ export default async function handler(req, res) {
     }
     if (action === "removeFromQueue") {
       await sql`DELETE FROM guest_queue WHERE track_id = ${trackId}`;
+      return res.json({ success: true });
+    }
+    if (action === "openQueue") {
+      await sql`UPDATE settings SET value = 'true' WHERE key = 'queue_open'`;
+      return res.json({ success: true });
+    }
+    if (action === "closeQueue") {
+      await sql`UPDATE settings SET value = 'false' WHERE key = 'queue_open'`;
       return res.json({ success: true });
     }
   }
