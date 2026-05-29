@@ -1,6 +1,9 @@
 
   
 
+
+  
+  
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -125,6 +128,7 @@ export default function Jukebox() {
   const [progressMs, setProgressMs] = useState(0);
   const [spotifyQueue, setSpotifyQueue] = useState([]);
   const [waitMinutesAtPurchase, setWaitMinutesAtPurchase] = useState(0);
+  const waitMinutesAtPurchaseRef = useRef(0);
   const [guestQueue, setGuestQueue] = useState([]); // Hämtas från Blob
   const [selected, setSelected] = useState(null);
   const [paymentStep, setPaymentStep] = useState(null);
@@ -231,6 +235,7 @@ export default function Jukebox() {
     }
 
     setSelected(track);
+    waitMinutesAtPurchaseRef.current = waitMinutes;
     setWaitMinutesAtPurchase(waitMinutes);
     if (testMode) {
       try {
@@ -444,9 +449,9 @@ export default function Jukebox() {
               <div style={s.modalTitle}>{selected?.name}</div>
               <div style={s.modalArtist}>{selected?.artists.map(a => a.name).join(", ")}</div>
               <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.6 }}>
-                {waitMinutesAtPurchase <= 1
+                {waitMinutesAtPurchaseRef.current <= 1
                   ? "Den kommer att spelas efter den här."
-                  : `Den kommer att spelas om ca ${waitMinutesAtPurchase} minuter.`}
+                  : `Den kommer att spelas om ca ${waitMinutesAtPurchaseRef.current} minuter.`}
               </p>
               <p style={{ color: "#92400e", fontSize: 14, margin: 0 }}>Njut av musiken!</p>
               <button style={s.modalPrimary} onClick={handleClose}>Stäng</button>
