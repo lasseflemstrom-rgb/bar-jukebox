@@ -1,6 +1,7 @@
 
   
-  import { useState, useEffect, useRef } from "react";
+  
+import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -438,11 +439,14 @@ export default function Jukebox() {
         {paymentStep === "done" && (
           <div style={s.overlay} onClick={handleClose}>
             <div style={s.modal} onClick={e => e.stopPropagation()}>
-              <div style={s.successIcon}>🎉</div>
-              <div style={s.modalHeader}>LÅT TILLAGD!</div>
+              <div style={s.modalHeader}>Din låt är tillagd!</div>
               <div style={s.modalTitle}>{selected?.name}</div>
               <div style={s.modalArtist}>{selected?.artists.map(a => a.name).join(", ")}</div>
-              <div style={s.modalWait}>{waitText}</div>
+              <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.6 }}>
+                {queueCount <= 1
+                  ? "Den kommer att spelas efter den här."
+                  : `Den kommer att spelas om ca ${waitMinutes} minuter.`}
+              </p>
               <p style={{ color: "#92400e", fontSize: 14, margin: 0 }}>Njut av musiken!</p>
               <button style={s.modalPrimary} onClick={handleClose}>Stäng</button>
             </div>
