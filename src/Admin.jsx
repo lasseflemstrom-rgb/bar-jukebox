@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 // ADMIN PIN — ändra detta till ett eget lösenord
 // ============================================================
 const ADMIN_PIN = "1234";
-const TRIGGER_SECONDS = 20; // Sekunder kvar när nästa låt köas
 
 // ============================================================
 // API-HJÄLPARE
@@ -40,9 +39,7 @@ export default function Admin() {
   const [nowPlaying, setNowPlaying] = useState(null);
   const [progressMs, setProgressMs] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [jukeboxActive, setJukeboxActive] = useState(false);
   const [log, setLog] = useState([]);
-  const [nextQueued, setNextQueued] = useState(false);
 
   const lastSongId = useRef(null);
   const progressRef = useRef(0);
@@ -66,7 +63,6 @@ export default function Admin() {
 
           if (playing.item.id !== lastSongId.current) {
             lastSongId.current = playing.item.id;
-            setNextQueued(false);
             addLog(`Spelar nu: ${playing.item.name}`);
           }
         }
@@ -93,25 +89,6 @@ export default function Admin() {
     }, 1000);
     return () => clearInterval(id);
   }, [nowPlaying?.id]);
-
-  // Trigger nästa låt
-  useEffect(() => {
-   console.log("Effect check:", { jukeboxActive, nowPlaying: !!nowPlaying, nextQueued });
-if (!jukeboxActive || !nowPlaying || nextQueued) return;
-    const remaining = nowPlaying.duration_ms - progressMs;
-    console.log("Remaining:", remaining, "Queue:", queue.length, "Active:", jukeboxActive, "NextQueued:", nextQueued); 
-
-    if (remaining <= TRIGGER_SECONDS * 1000 && queue.length > 0) {
-      setNextQueued(true);
-      adminPost({ action: "addNextToSpotify" }).then(result => {
-        if (result.track) {
-          addLog(`✅ Lade till: ${result.track.track_name} i Spotify-kön`);
-        } else if (result.empty) {
-          addLog("Kön är tom — Spotify fortsätter shuffle");
-        }
-      }).catch(err => addLog("❌ Fel: " + err.message));
-    }
-  }, [progressMs, jukeboxActive, nowPlaying, queue, nextQueued]);
 
   const handleLogin = () => {
     if (pin === ADMIN_PIN) {
@@ -140,14 +117,6 @@ if (!jukeboxActive || !nowPlaying || nextQueued) return;
     setQueue(q => q.filter(t => t.track_id !== trackId));
     addLog(`🗑 Tog bort: ${trackName}`);
   };
-  const handleStartJukebox = () => {
-    setJukeboxActive(true);
-    addLog("🎵 Jukebox-läge aktiverat");
-  };
-  const handleStopJukebox = () => {
-    setJukeboxActive(false);
-    addLog("⏹ Jukebox-läge avstängt");
-  };
 
   const progressPct = nowPlaying ? (progressMs / nowPlaying.duration_ms) * 100 : 0;
   const remaining = nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0;
@@ -160,7 +129,7 @@ if (!jukeboxActive || !nowPlaying || nextQueued) return;
       <div style={s.loginWrap}>
         <div style={s.loginBox}>
           <div style={s.loginTitle}>🎵 ADMIN</div>
-          <div style={s.loginSub}>MusikMaskinen Jukebox</div>
+          <div style={s.loginSub}>Musikmaskinen</div>
           <input
             style={{ ...s.pinInput, borderColor: pinError ? "#ef4444" : "#e8d5a3" }}
             type="password"
@@ -183,13 +152,7 @@ if (!jukeboxActive || !nowPlaying || nextQueued) return;
     <div style={s.app}>
       <header style={s.header}>
         <div style={s.headerTitle}>🎵 MUSIKMASKINEN — ADMIN</div>
-        <div style={s.jukeboxToggle}>
-          {jukeboxActive ? (
-            <button style={s.btnStop} onClick={handleStopJukebox}>⏹ Stäng av jukebox-läge</button>
-          ) : (
-            <button style={s.btnStart} onClick={handleStartJukebox}>▶ Starta jukebox-läge</button>
-          )}
-        </div>
+        <div style={{ color: "#86efac", fontSize: 13, fontWeight: 700 }}>🟢 AUTO-KÖ AKTIV</div>
       </header>
 
       <div style={s.grid}>
@@ -267,12 +230,6 @@ if (!jukeboxActive || !nowPlaying || nextQueued) return;
         </div>
 
       </div>
-
-      {jukeboxActive && (
-        <div style={s.activeBar}>
-          🟢 JUKEBOX-LÄGE AKTIVT — Nästa låt köas automatiskt när {TRIGGER_SECONDS}s återstår
-        </div>
-      )}
     </div>
   );
 }
@@ -298,6 +255,9 @@ const s = {
   header: { background: darkRed, borderBottom: `3px solid ${chrome}`, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" },
   headerTitle: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: cream, letterSpacing: 3 },
   jukeboxToggle: {},
+  btnStart: { background: "#22c55e", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Lato', sans-serif" },
+  btnStop: { background: "#ef4444", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Lato', sans-serif" },
+
   grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, padding: 16, maxWidth: 900, margin: "0 auto" },
   card: { background: "#2a2a2a", borderRadius: 12, padding: 20, border: "1px solid #444" },
   cardTitle: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: chrome, letterSpacing: 3, marginBottom: 16 },
