@@ -1,7 +1,6 @@
 import { list, put } from "@vercel/blob";
 
 export async function getToken() {
-  // Hitta blob via list
   const { blobs } = await list({ prefix: "spotify-token" });
   if (!blobs.length) throw new Error("Ingen token – logga in på /api/auth");
   
