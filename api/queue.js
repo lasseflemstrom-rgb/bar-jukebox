@@ -3,10 +3,7 @@ import { neon } from "@neondatabase/serverless";
 const sql = neon(process.env.DATABASE_URL);
 
 async function initDb() {
-  await sql`CREATE TABLE IF NOT EXISTS guest_queue (track_id TEXT PRIMARY KEY, track_name TEXT, artist_name TEXT, duration_ms INTEGER NOT NULL, added_at BIGINT NOT NULL)`;
   await sql`CREATE TABLE IF NOT EXISTS recently_played (track_id TEXT PRIMARY KEY, track_name TEXT, played_at BIGINT NOT NULL)`;
-  await sql`ALTER TABLE guest_queue ADD COLUMN IF NOT EXISTS track_name TEXT`;
-  await sql`ALTER TABLE guest_queue ADD COLUMN IF NOT EXISTS artist_name TEXT`;
 }
 
 async function getToken() {
@@ -31,7 +28,7 @@ export default async function handler(req, res) {
   await initDb();
 
   if (req.method === "POST") {
-    const { uri, trackId, duration_ms, trackName, artistName } = req.body;
+    const { uri, trackId, trackName } = req.body;
     try {
       const token = await getToken();
       const spotifyRes = await fetch("https://api.spotify.com/v1/me/player/queue?uri=" + encodeURIComponent(uri), {
@@ -42,11 +39,12 @@ export default async function handler(req, res) {
         const text = await spotifyRes.text();
         return res.status(500).json({ error: "Spotify: " + spotifyRes.status + " " + text });
       }
-      if (trackId && duration_ms) {
+      // Spara i recently_played direkt
+      if (trackId) {
         await sql`
-          INSERT INTO guest_queue (track_id, track_name, artist_name, duration_ms, added_at)
-          VALUES (${trackId}, ${trackName || ""}, ${artistName || ""}, ${duration_ms}, ${Date.now()})
-          ON CONFLICT (track_id) DO UPDATE SET added_at = ${Date.now()}
+          INSERT INTO recently_played (track_id, track_name, played_at)
+          VALUES (${trackId}, ${trackName || ""}, ${Date.now()})
+          ON CONFLICT (track_id) DO UPDATE SET played_at = ${Date.now()}
         `;
       }
       return res.json({ success: true });
@@ -56,35 +54,10 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "GET") {
-    const type = req.query.type;
-    const nowPlayingId = req.query.nowPlayingId;
-
-    if (type === "guestqueue") {
-      try {
-        if (nowPlayingId) {
-          const playing = await sql`SELECT * FROM guest_queue WHERE track_id = ${nowPlayingId}`;
-          if (playing.length > 0) {
-            await sql`INSERT INTO recently_played (track_id, track_name, played_at) VALUES (${nowPlayingId}, ${playing[0].track_name}, ${Date.now()}) ON CONFLICT (track_id) DO UPDATE SET played_at = ${Date.now()}`;
-            await sql`DELETE FROM guest_queue WHERE track_id = ${nowPlayingId}`;
-          }
-        }
-        await sql`DELETE FROM guest_queue WHERE added_at < ${Date.now() - 7200000}`;
-        const rows = await sql`SELECT * FROM guest_queue ORDER BY added_at ASC`;
-        return res.json(rows.map(r => ({
-          trackId: r.track_id,
-          trackName: r.track_name,
-          artistName: r.artist_name,
-          duration_ms: r.duration_ms,
-          addedAt: parseInt(r.added_at),
-        })));
-      } catch (err) {
-        console.log("DB error:", err.message);
-        return res.json([]);
-      }
-    }
-
     try {
       const token = await getToken();
+      const type = req.query.type;
+
       if (type === "playlist") {
         let all = [];
         let url = "https://api.spotify.com/v1/playlists/" + process.env.SPOTIFY_PLAYLIST_ID + "/items?limit=50";

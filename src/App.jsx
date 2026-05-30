@@ -1,6 +1,3 @@
-
-  
-  
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -9,7 +6,7 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 // KONFIGURATION
 // ============================================================
 const CONFIG = {
-  STRIPE_PUBLISHABLE_KEY: "pk_test_51TazxlAiBeFbGSJSUmWzOombCWLtTwS1jf19caS6IgohzkL2DAzZpt9baz4U18bGt8mftZECI7Kg7xrccjnzPqtE00Gi7ZproV", // pk_test_...
+  STRIPE_PUBLISHABLE_KEY: "Ypk_test_51TazxlAiBeFbGSJSUmWzOombCWLtTwS1jf19caS6IgohzkL2DAzZpt9baz4U18bGt8mftZECI7Kg7xrccjnzPqtE00Gi7ZproV", // pk_test_...
   PRICE_PER_SONG: 15, // SEK
   MAX_QUEUE_SIZE: 3,
   TEST_MODE: true,
@@ -124,10 +121,7 @@ export default function Jukebox() {
   const [nowPlaying, setNowPlaying] = useState(null);
   const [progressMs, setProgressMs] = useState(0);
   const [spotifyQueue, setSpotifyQueue] = useState([]);
-  const [waitMinutesAtPurchase, setWaitMinutesAtPurchase] = useState(0);
-  const waitMinutesAtPurchaseRef = useRef(0);
-  const [guestQueue, setGuestQueue] = useState([]);
-  const [queueOpen, setQueueOpen] = useState(true); // Hämtas från Blob
+  const [queueOpen, setQueueOpen] = useState(true);
   const [selected, setSelected] = useState(null);
   const [paymentStep, setPaymentStep] = useState(null);
   const [clientSecret, setClientSecret] = useState(null);
@@ -154,6 +148,7 @@ export default function Jukebox() {
           if (newSongId !== lastSongId.current) {
             lastSongId.current = newSongId;
             setProgressMs(playback.progress_ms || 0);
+            setSessionQueueCount(c => Math.max(0, c - 1));
           } else {
             setProgressMs((prev) => {
               const drift = Math.abs(prev - (playback.progress_ms || 0));
@@ -162,13 +157,6 @@ export default function Jukebox() {
           }
           setNowPlaying(playback.item);
         }
-        const queueData = await apiGet("queue");
-        const fullQueue = queueData?.queue || [];
-        setSpotifyQueue(fullQueue);
-
-        // Hämta gästkön från databasen
-        const gq = await apiGet("guestqueue");
-        setGuestQueue(gq || []);
 
         // Hämta om kön är öppen
         const settings = await fetch("/api/admin?type=settings").then(r => r.json()).catch(() => ({}));
@@ -205,19 +193,9 @@ export default function Jukebox() {
   };
 
   // Använd gästkön från Blob — alltid korrekt även vid sidomladdning
-  const queueCount = guestQueue.length;
-  const queueFull = queueCount >= CONFIG.MAX_QUEUE_SIZE;
-
-  // Beräkna total väntetid
-  const totalWaitMs = guestQueue.reduce((sum, t) => sum + (t.duration_ms || 0), 0) +
-    (nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0);
-  const waitMinutes = Math.ceil(totalWaitMs / 60000);
-
-  const waitText = queueCount === 0
-    ? "⚡ Näst i kön!"
-    : queueCount === 1
-    ? "🎵 1 låt före dig"
-    : `🎵 ${queueCount} låtar före dig`;
+  // Håll koll på hur många låtar gästen köat i denna session
+  const [sessionQueueCount, setSessionQueueCount] = useState(0);
+  const queueFull = sessionQueueCount >= CONFIG.MAX_QUEUE_SIZE;
 
   const handleSelectSong = async (track) => {
     if (!queueOpen) { notify("Kön är stängd för ikväll.", "error"); return; }
@@ -238,11 +216,10 @@ export default function Jukebox() {
     }
 
     setSelected(track);
-    waitMinutesAtPurchaseRef.current = waitMinutes;
-    setWaitMinutesAtPurchase(waitMinutes);
     if (testMode) {
       try {
         await apiAddToQueue(track.uri, track.id, track.duration_ms, track.name, artistName);
+        setSessionQueueCount(c => c + 1);
         notify(`"${track.name}" är tillagd i jukebox!`);
         setPaymentStep("done");
       } catch {
@@ -260,6 +237,7 @@ export default function Jukebox() {
   };
 
   const handlePaymentSuccess = () => {
+    setSessionQueueCount(c => c + 1);
     notify(`"${selected.name}" är tillagd i jukebox!`);
     setPaymentStep("done");
     setClientSecret(null);
@@ -294,7 +272,7 @@ export default function Jukebox() {
                 onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "block"; }}
               />
               <div style={{ display: "none" }}>
-                <div style={s.fallbackNeonSmall}>MUSIKMASKINEN</div>
+                <div style={s.fallbackNeonSmall}>NEON NEEDLE</div>
                 <div style={s.fallbackSubSmall}>JUKEBOX</div>
               </div>
             </div>
@@ -551,3 +529,7 @@ const s = {
   modalGhost: { background: "transparent", color: "#999", border: `1px solid ${chrome}`, borderRadius: 50, padding: "10px 24px", fontSize: 13, fontFamily: "'Lato', sans-serif", cursor: "pointer" },
   successIcon: { fontSize: 56 },
 };
+  
+
+  
+  
