@@ -1,5 +1,4 @@
 import { neon } from "@neondatabase/serverless";
-import { getToken } from "./spotify-token.js";
 
 const sql = neon(process.env.DATABASE_URL);
 
@@ -8,6 +7,11 @@ async function initDb() {
   await sql`CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)`;
   await sql`INSERT INTO settings (key, value) VALUES ('queue_open', 'true') ON CONFLICT (key) DO NOTHING`;
 }
+
+let cachedToken = null;
+let tokenExpiry = 0;
+
+import { getToken } from "./spotify-token.js";
 
 export default async function handler(req, res) {
   await initDb();

@@ -1,6 +1,7 @@
 export default async function handler(req, res) {
   const { code } = req.query;
   if (!code) return res.status(400).send("Ingen kod hittades");
+
   const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -12,23 +13,24 @@ export default async function handler(req, res) {
       client_secret: process.env.SPOTIFY_CLIENT_SECRET,
     }),
   });
+
   const data = await tokenRes.json();
   if (!data.access_token) return res.status(400).send("Auth misslyckades: " + JSON.stringify(data));
-  
-  const { put, list, del } = await import("@vercel/blob");
-  
-  // Ta bort gamla token-filer
-  const { blobs } = await list({ prefix: "spotify-token" });
-  for (const blob of blobs) {
-    await del(blob.url);
-  }
-  
-  // Spara ny token
-  await put("spotify-token.json", JSON.stringify({
-    access_token: data.access_token,
-    refresh_token: data.refresh_token,
-    expires_at: Date.now() + (data.expires_in - 60) * 1000,
-  }), { access: "private", allowOverwrite: true });
-  
-  res.send("✅ Inloggad! Stäng fönstret.");
+
+  // Spara refresh_token som miljövariabel i Vercel
+  await fetch("https://api.vercel.com/v9/projects/" + process.env.VERCEL_PROJECT_ID + "/env", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + process.env.VERCEL_TOKEN,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      key: "SPOTIFY_REFRESH_TOKEN",
+      value: data.refresh_token,
+      type: "plain",
+      target: ["production", "preview"],
+    }),
+  });
+
+  res.send("✅ Inloggad! Stäng fönstret och redeploya Vercel för att aktivera.");
 }
