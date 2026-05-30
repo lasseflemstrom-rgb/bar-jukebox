@@ -1,5 +1,5 @@
 
-  STRIPE_PUBLISHABLE_KEY: "pk_test_51TazxlAiBeFbGSJSUmWzOombCWLtTwS1jf19caS6IgohzkL2DAzZpt9baz4U18bGt8mftZECI7Kg7xrccjnzPqtE00Gi7ZproV", // pk_test_...
+  
   
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
@@ -9,7 +9,7 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 // KONFIGURATION
 // ============================================================
 const CONFIG = {
-  STRIPE_PUBLISHABLE_KEY: "YOUR_STRIPE_PUBLISHABLE_KEY", // pk_test_...
+  STRIPE_PUBLISHABLE_KEY: "pk_test_51TazxlAiBeFbGSJSUmWzOombCWLtTwS1jf19caS6IgohzkL2DAzZpt9baz4U18bGt8mftZECI7Kg7xrccjnzPqtE00Gi7ZproV", // pk_test_...
   PRICE_PER_SONG: 15, // SEK
   MAX_QUEUE_SIZE: 3,
   TEST_MODE: true,
