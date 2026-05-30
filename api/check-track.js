@@ -7,12 +7,14 @@ export default async function handler(req, res) {
   const { trackId } = req.body;
   try {
     await sql`CREATE TABLE IF NOT EXISTS recently_played (track_id TEXT PRIMARY KEY, track_name TEXT, played_at BIGINT NOT NULL)`;
-    const fortyFiveMinAgo = Date.now() - 45 * 60 * 1000;
     const recent = await sql`
       SELECT track_id FROM recently_played
-      WHERE track_id = ${trackId} AND played_at > ${fortyFiveMinAgo}
+      ORDER BY played_at DESC
+      LIMIT 8
     `;
-    if (recent.length > 0) return res.json({ blocked: true, reason: "recentlyPlayed" });
+    if (recent.some(r => r.track_id === trackId)) {
+      return res.json({ blocked: true, reason: "recentlyPlayed" });
+    }
     return res.json({ blocked: false });
   } catch {
     return res.json({ blocked: false });

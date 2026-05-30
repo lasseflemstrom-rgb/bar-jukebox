@@ -272,7 +272,7 @@ export default function Jukebox() {
                 onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "block"; }}
               />
               <div style={{ display: "none" }}>
-                <div style={s.fallbackNeonSmall}>NEON NEEDLE</div>
+                <div style={s.fallbackNeonSmall}>MUSIKMASKINEN</div>
                 <div style={s.fallbackSubSmall}>JUKEBOX</div>
               </div>
             </div>
@@ -401,7 +401,7 @@ export default function Jukebox() {
               <div style={s.modalHeader}>SPELADES NYLIGEN</div>
               <div style={s.modalTitle}>{selected?.name}</div>
               <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.5 }}>
-                Den här låten spelades för mindre än 45 minuter sedan. Välj en annan låt!
+                Den här låten spelades nyss. Välj en annan låt!
               </p>
               <button style={s.modalPrimary} onClick={handleClose}>Välj annan låt</button>
             </div>
