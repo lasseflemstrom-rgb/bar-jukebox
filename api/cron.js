@@ -24,7 +24,20 @@ export default async function handler(req, res) {
   try {
     // Kolla om det finns låtar i kön
     const rows = await sql`SELECT * FROM guest_queue ORDER BY added_at ASC LIMIT 1`;
-    if (rows.length === 0) return res.json({ status: "empty" });
+    if (remaining > 20000) {
+  // Schemalägg nästa anrop om (remaining - 20 sek)
+  const delay = Math.max(5, Math.floor((remaining - 20000) / 1000));
+  await fetch("https://qstash.upstash.io/v2/publish/https://bar-jukebox.vercel.app/api/cron", {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer " + process.env.QSTASH_TOKEN,
+      "Content-Type": "application/json",
+      "Upstash-Delay": delay + "s",
+    },
+    body: JSON.stringify({}),
+  });
+  return res.json({ status: "waiting", remaining, nextCheck: delay });
+}
 
     // Kolla nuvarande uppspelning
     const token = await getToken();
