@@ -45,7 +45,15 @@ async function createPaymentIntent(amount, trackName, trackUri) {
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
-
+async function apiAddToQueue(uri, trackId, trackName) {
+  const res = await fetch("/api/queue", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ uri, trackId, trackName }),
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
 const msToMin = (ms) =>
   `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
 
