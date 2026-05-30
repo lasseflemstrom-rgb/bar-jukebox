@@ -462,8 +462,8 @@ const amber = "#ff6b35";
 
 const s = {
   app: { minHeight: "100vh", background: cream, fontFamily: "'Lato', sans-serif", position: "relative", overflowX: "hidden", paddingBottom: 60 },
-  bubbleLeft: { position: "fixed", left: -60, top: "20%", width: 120, height: 300, background: `linear-gradient(180deg, ${red}30, ${amber}20, ${red}30)`, borderRadius: "0 60px 60px 0", pointerEvents: "none", animation: "bubbleFloat 4s ease-in-out infinite", zIndex: 0 },
-  bubbleRight: { position: "fixed", right: -60, top: "40%", width: 120, height: 250, background: `linear-gradient(180deg, ${amber}20, ${red}30, ${amber}20)`, borderRadius: "60px 0 0 60px", pointerEvents: "none", animation: "bubbleFloat 5s ease-in-out infinite reverse", zIndex: 0 },
+  bubbleLeft: { position: "fixed", left: -90, top: "20%", width: 120, height: 300, background: `linear-gradient(180deg, ${red}30, ${amber}20, ${red}30)`, borderRadius: "0 60px 60px 0", pointerEvents: "none", animation: "bubbleFloat 4s ease-in-out infinite", zIndex: 0 },
+  bubbleRight: { position: "fixed", right: -90, top: "40%", width: 120, height: 250, background: `linear-gradient(180deg, ${amber}20, ${red}30, ${amber}20)`, borderRadius: "60px 0 0 60px", pointerEvents: "none", animation: "bubbleFloat 5s ease-in-out infinite reverse", zIndex: 0 },
   testRibbon: { background: "#78350f", color: "#fef3c7", fontSize: 11, fontWeight: 700, letterSpacing: 2, padding: "5px 16px", display: "flex", justifyContent: "center", alignItems: "center", gap: 12, position: "relative", zIndex: 10 },
   testBtn: { background: "#fef3c7", color: "#78350f", border: "none", borderRadius: 10, padding: "2px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer" },
   header: { background: `linear-gradient(180deg, ${darkRed} 0%, ${red} 100%)`, borderBottom: `4px solid ${chrome}`, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" },
