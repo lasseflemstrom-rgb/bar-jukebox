@@ -17,20 +17,5 @@ export default async function handler(req, res) {
   const data = await tokenRes.json();
   if (!data.access_token) return res.status(400).send("Auth misslyckades: " + JSON.stringify(data));
 
-  // Spara refresh_token som miljövariabel i Vercel
-  await fetch("https://api.vercel.com/v9/projects/" + process.env.VERCEL_PROJECT_ID + "/env", {
-    method: "POST",
-    headers: {
-      Authorization: "Bearer " + process.env.VERCEL_TOKEN,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      key: "SPOTIFY_REFRESH_TOKEN",
-      value: data.refresh_token,
-      type: "plain",
-      target: ["production", "preview"],
-    }),
-  });
-
-  res.send("✅ Inloggad! Stäng fönstret och redeploya Vercel för att aktivera.");
+  res.send(`✅ Inloggad! Din refresh token:<br><br><code style="word-break:break-all">${data.refresh_token}</code><br><br>Kopiera den till Vercel Environment Variables som SPOTIFY_REFRESH_TOKEN.`);
 }
