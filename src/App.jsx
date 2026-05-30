@@ -492,7 +492,7 @@ const s = {
   clearBtn: { background: "none", border: "none", cursor: "pointer", color: "#999", fontSize: 14, padding: "4px" },
   trackList: { padding: "8px 16px", display: "flex", flexDirection: "column", gap: 6, position: "relative", zIndex: 1, maxWidth: "100%", boxSizing: "border-box" },
   emptyMsg: { textAlign: "center", color: "#999", padding: 40, fontStyle: "italic" },
-  trackRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#fff", border: `1px solid ${chrome}80`, borderRadius: 8, transition: "all 0.15s ease", animation: "fadeIn 0.4s ease both", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" },
+  trackRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#fff", border: `1px solid ${chrome}80`, borderRadius: 8, transition: "all 0.15s ease", animation: "fadeIn 0.4s ease both", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden", maxWidth: "100%" }, 
   trackArt: { width: 44, height: 44, borderRadius: 4, flexShrink: 0, background: "#eee", border: `1px solid ${chrome}` },
   trackInfo: { flex: 1, minWidth: 0 },
   trackName: { fontSize: 14, fontWeight: 700, color: warmBlack, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
