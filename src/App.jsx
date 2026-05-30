@@ -447,13 +447,12 @@ function SpotifyLogoWhiteSmall() {
 const globalStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Bebas+Neue&family=Lato:wght@400;700&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #7a0000; font-family: 'Lato', sans-serif; overflow-x: hidden; touch-action: pan-y; }
+  html, body { background: #7a0000; font-family: 'Lato', sans-serif; overflow-x: hidden; touch-action: pan-y; }
   .track-row:hover { background: #fef9f0 !important; transform: translateX(3px); box-shadow: -4px 0 0 #c41e1e; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes bubbleFloat { 0%, 100% { transform: translateY(0px) scale(1); } 50% { transform: translateY(-20px) scale(1.02); } }
   @keyframes neonPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
 `;
-
 const cream = "#f5e6c8";
 const red = "#c41e1e";
 const darkRed = "#7a0000";
