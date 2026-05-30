@@ -32,3 +32,12 @@ export async function getToken() {
   
   return data.access_token;
 }
+
+export default async function handler(req, res) {
+  try {
+    const token = await getToken();
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
