@@ -6,31 +6,7 @@ async function initDb() {
 }
 
 // Token-cache
-let cachedToken = null;
-let tokenExpiry = 0;
-
-async function getToken() {
-  if (cachedToken && Date.now() < tokenExpiry) return cachedToken;
-
-  const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
-  if (!refreshToken) throw new Error("Ingen refresh token");
-  const res = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: refreshToken,
-      client_id: process.env.SPOTIFY_CLIENT_ID,
-      client_secret: process.env.SPOTIFY_CLIENT_SECRET,
-    }),
-  });
-  const data = await res.json();
-  if (!data.access_token) throw new Error("Token misslyckades");
-
-  cachedToken = data.access_token;
-  tokenExpiry = Date.now() + (data.expires_in - 60) * 1000; // ~59 min
-  return cachedToken;
-}
+import { getToken } from "./spotify-token.js";
 
 export default async function handler(req, res) {
   await initDb();
