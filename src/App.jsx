@@ -467,7 +467,7 @@ const s = {
   testRibbon: { background: "#78350f", color: "#fef3c7", fontSize: 11, fontWeight: 700, letterSpacing: 2, padding: "5px 16px", display: "flex", justifyContent: "center", alignItems: "center", gap: 12, position: "relative", zIndex: 10, overflow: "hidden", width: "100%" },
   testBtn: { background: "#fef3c7", color: "#78350f", border: "none", borderRadius: 10, padding: "2px 8px", fontSize: 10, fontWeight: 700, cursor: "pointer" },
   header: { background: `linear-gradient(180deg, ${darkRed} 0%, ${red} 100%)`, borderBottom: `4px solid ${chrome}`, position: "sticky", top: 0, zIndex: 10, boxShadow: "0 4px 20px rgba(0,0,0,0.3)" },
-  headerInner: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 16px", gap: 12 },
+  headerInner: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 16px", gap: 12, overflow: "hidden" },
   headerLogoWrap: { flexShrink: 0 },
   headerLogo: { height: 72, width: "auto", display: "block", filter: "drop-shadow(0 0 8px rgba(255,107,53,0.5))", animation: "neonPulse 3s ease-in-out infinite", mixBlendMode: "lighten" },
   fallbackNeonSmall: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: "#ff3b3b", letterSpacing: 3, textShadow: "0 0 10px #ff3b3b" },
