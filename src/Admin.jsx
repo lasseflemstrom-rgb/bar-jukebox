@@ -54,7 +54,7 @@ export default function Admin() {
             addLog(`Spelar nu: ${playing.item.name}`);
           }
         }
-        setQueue(spotifyQueue);
+        setQueue(spotifyQueue.slice(0, 5));
         setQueueOpen(isOpen);
       } catch {}
     };
