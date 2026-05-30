@@ -49,51 +49,31 @@ async function scheduleNextCron(delayMs) {
 export default async function handler(req, res) {
   await initDb();
 
-  if (req.method === "POST") {
-    const { trackId, duration_ms, trackName, artistName } = req.body;
-    try {
-      if (trackId && duration_ms) {
-        await sql`
-          INSERT INTO guest_queue (track_id, track_name, artist_name, duration_ms, added_at)
-          VALUES (${trackId}, ${trackName || ""}, ${artistName || ""}, ${duration_ms}, ${Date.now()})
-          ON CONFLICT (track_id) DO UPDATE SET added_at = ${Date.now()}
-        `;
-
-        // Hämta hur lång tid kvar på nuvarande låt
-        try {
-          const token = await getToken();
-          const playbackRes = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
-            headers: { Authorization: "Bearer " + token },
-          });
-          if (playbackRes.ok && playbackRes.status !== 204) {
-            const playback = await playbackRes.json();
-            if (playback?.item) {
-              const remaining = playback.item.duration_ms - (playback.progress_ms || 0);
-
-              // Kolla hur många låtar som är i kön redan
-              const queueRows = await sql`SELECT COUNT(*) as count FROM guest_queue`;
-              const queueSize = parseInt(queueRows[0].count);
-
-              // Schemalägg cron när det är dags för just den här låten
-              // Om det är den enda låten: remaining - 20 sek
-              // Om det finns fler: remaining + (queueSize-1) * genomsnittlig låtlängd - 20 sek
-              const delay = Math.max(5000, remaining - 20000);
-              await scheduleNextCron(delay);
-            }
-          }
-        } catch (err) {
-          console.log("Kunde inte schemalägga:", err.message);
-        }
-      }
-      return res.json({ success: true });
-    } catch (err) {
-      return res.status(500).json({ error: err.message });
+ if (req.method === "POST") {
+  const { uri, trackId, duration_ms, trackName, artistName } = req.body;
+  try {
+    const token = await getToken();
+    const spotifyRes = await fetch("https://api.spotify.com/v1/me/player/queue?uri=" + encodeURIComponent(uri), {
+      method: "POST",
+      headers: { Authorization: "Bearer " + token },
+    });
+    if (!spotifyRes.ok) {
+      const text = await spotifyRes.text();
+      return res.status(500).json({ error: "Spotify: " + spotifyRes.status + " " + text });
     }
+    // Spara i databasen för dubblettskydd och köinfo
+    if (trackId && duration_ms) {
+      await sql`
+        INSERT INTO guest_queue (track_id, track_name, artist_name, duration_ms, added_at)
+        VALUES (${trackId}, ${trackName || ""}, ${artistName || ""}, ${duration_ms}, ${Date.now()})
+        ON CONFLICT (track_id) DO UPDATE SET added_at = ${Date.now()}
+      `;
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
-
-  if (req.method === "GET") {
-    const type = req.query.type;
-    const nowPlayingId = req.query.nowPlayingId;
+}
 
     if (type === "guestqueue") {
       try {
