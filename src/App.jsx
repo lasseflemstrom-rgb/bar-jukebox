@@ -1,7 +1,7 @@
 
- 
+  STRIPE_PUBLISHABLE_KEY: "pk_test_51TazxlAiBeFbGSJSUmWzOombCWLtTwS1jf19caS6IgohzkL2DAzZpt9baz4U18bGt8mftZECI7Kg7xrccjnzPqtE00Gi7ZproV", // pk_test_...
   
-  import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -9,9 +9,9 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 // KONFIGURATION
 // ============================================================
 const CONFIG = {
-  STRIPE_PUBLISHABLE_KEY: "pk_test_51TazxlAiBeFbGSJSUmWzOombCWLtTwS1jf19caS6IgohzkL2DAzZpt9baz4U18bGt8mftZECI7Kg7xrccjnzPqtE00Gi7ZproV", // pk_test_...
+  STRIPE_PUBLISHABLE_KEY: "YOUR_STRIPE_PUBLISHABLE_KEY", // pk_test_...
   PRICE_PER_SONG: 15, // SEK
-  MAX_QUEUE_SIZE: 5,
+  MAX_QUEUE_SIZE: 3,
   TEST_MODE: true,
 };
 
@@ -294,7 +294,7 @@ export default function Jukebox() {
                 onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "block"; }}
               />
               <div style={{ display: "none" }}>
-                <div style={s.fallbackNeonSmall}>NEON NEEDLE</div>
+                <div style={s.fallbackNeonSmall}>MUSIKMASKINEN</div>
                 <div style={s.fallbackSubSmall}>JUKEBOX</div>
               </div>
             </div>
@@ -322,10 +322,8 @@ export default function Jukebox() {
               <span style={{ color: "#fca5a5" }}>🔒 Kön är stängd för ikväll</span>
             ) : queueFull ? (
               <span style={{ color: "#fca5a5" }}>⛔ Kön är full — prova igen snart!</span>
-            ) : queueCount > 0 ? (
-              <span>⏱ Ca {waitMinutes} min väntetid · {queueCount} låt{queueCount > 1 ? "ar" : ""} i kön</span>
             ) : (
-              <span>🎵 Välj nästa låt — kön är tom!</span>
+              <span>🎵 Välj en låt du vill höra! Den spelas alldeles strax!</span>
             )}
             {!testMode && queueOpen && <span style={s.queuePrice}>{CONFIG.PRICE_PER_SONG} kr / låt</span>}
           </div>
@@ -454,9 +452,7 @@ export default function Jukebox() {
               <div style={s.modalTitle}>{selected?.name}</div>
               <div style={s.modalArtist}>{selected?.artists.map(a => a.name).join(", ")}</div>
               <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.6 }}>
-                {waitMinutesAtPurchaseRef.current <= 1
-                  ? "Den kommer att spelas efter den här."
-                  : `Den kommer att spelas om ca ${waitMinutesAtPurchaseRef.current} minuter.`}
+                Din låt spelas strax!
               </p>
               <p style={{ color: "#92400e", fontSize: 14, margin: 0 }}>Njut av musiken!</p>
               <button style={s.modalPrimary} onClick={handleClose}>Stäng</button>
