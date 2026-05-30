@@ -252,8 +252,8 @@ export default function Jukebox() {
     <>
       <style>{globalStyles}</style>
       <div style={s.app}>
-        <div style={s.bubbleLeft} />
-        <div style={s.bubbleRight} />
+        {/* <div style={s.bubbleLeft} /> */}
+        {/* <div style={s.bubbleRight} /> */}
 
         {testMode && (
           <div style={s.testRibbon}>
