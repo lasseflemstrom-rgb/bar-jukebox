@@ -1,6 +1,6 @@
 
   
-  import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -130,29 +130,26 @@ export default function Jukebox() {
   // Polla nuvarande låt från backend
   useEffect(() => {
     const poll = async () => {
-      try {
-        const playback = await apiGet("playing");
-        if (playback?.item) {
-          const newSongId = playback.item.id;
-          if (newSongId !== lastSongId.current) {
-            lastSongId.current = newSongId;
-            setProgressMs(playback.progress_ms || 0);
-            setSessionQueueCount(c => Math.max(0, c - 1));
-          } else {
-            setProgressMs((prev) => {
-              const drift = Math.abs(prev - (playback.progress_ms || 0));
-              return drift > 3000 ? playback.progress_ms : prev;
-            });
-          }
-          setNowPlaying(playback.item);
-        }
-        // Hämta om kön är öppen
-        const settings = await fetch("/api/admin?type=settings").then(r => r.json()).catch(() => ({}));
-        setQueueOpen(settings.queue_open !== "false");
-        const recent = await apiGet("recentlyplayed");
-        setRecentlyPlayed(recent || []);
-      } catch {}
-    };
+  try {
+    const { playing, recentlyPlayed, queueOpen: isOpen } = await apiGet("status");
+    if (playing?.item) {
+      const newSongId = playing.item.id;
+      if (newSongId !== lastSongId.current) {
+        lastSongId.current = newSongId;
+        setProgressMs(playing.progress_ms || 0);
+        setSessionQueueCount(c => Math.max(0, c - 1));
+      } else {
+        setProgressMs((prev) => {
+          const drift = Math.abs(prev - (playing.progress_ms || 0));
+          return drift > 3000 ? playing.progress_ms : prev;
+        });
+      }
+      setNowPlaying(playing.item);
+    }
+    setQueueOpen(isOpen);
+    setRecentlyPlayed(recentlyPlayed || []);
+  } catch {}
+};
     poll();
     const id = setInterval(poll, 8000);
     return () => clearInterval(id);

@@ -1,12 +1,17 @@
 import { neon } from "@neondatabase/serverless";
-
 const sql = neon(process.env.DATABASE_URL);
 
 async function initDb() {
   await sql`CREATE TABLE IF NOT EXISTS recently_played (track_id TEXT PRIMARY KEY, track_name TEXT, played_at BIGINT NOT NULL)`;
 }
 
+// Token-cache
+let cachedToken = null;
+let tokenExpiry = 0;
+
 async function getToken() {
+  if (cachedToken && Date.now() < tokenExpiry) return cachedToken;
+
   const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
   if (!refreshToken) throw new Error("Ingen refresh token");
   const res = await fetch("https://accounts.spotify.com/api/token", {
@@ -21,7 +26,10 @@ async function getToken() {
   });
   const data = await res.json();
   if (!data.access_token) throw new Error("Token misslyckades");
-  return data.access_token;
+
+  cachedToken = data.access_token;
+  tokenExpiry = Date.now() + (data.expires_in - 60) * 1000; // ~59 min
+  return cachedToken;
 }
 
 export default async function handler(req, res) {
@@ -39,7 +47,6 @@ export default async function handler(req, res) {
         const text = await spotifyRes.text();
         return res.status(500).json({ error: "Spotify: " + spotifyRes.status + " " + text });
       }
-      // Spara i recently_played direkt
       if (trackId) {
         await sql`
           INSERT INTO recently_played (track_id, track_name, played_at)
@@ -69,21 +76,40 @@ export default async function handler(req, res) {
         }
         all.sort((a, b) => a.name.localeCompare(b.name, "sv"));
         return res.json(all);
+
       } else if (type === "recentlyplayed") {
         const rows = await sql`SELECT track_id FROM recently_played ORDER BY played_at DESC LIMIT 8`;
         return res.json(rows.map(r => r.track_id));
+
       } else if (type === "playing") {
         const r = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
           headers: { Authorization: "Bearer " + token },
         });
         if (r.status === 204) return res.json(null);
         return res.json(await r.json());
+
       } else if (type === "queue") {
         const r = await fetch("https://api.spotify.com/v1/me/player/queue", {
           headers: { Authorization: "Bearer " + token },
         });
         return res.json(await r.json());
+
+      } else if (type === "status") {
+        const [playingRes, recent, settings] = await Promise.all([
+          fetch("https://api.spotify.com/v1/me/player/currently-playing", {
+            headers: { Authorization: "Bearer " + token },
+          }),
+          sql`SELECT track_id FROM recently_played ORDER BY played_at DESC LIMIT 8`,
+          sql`SELECT value FROM settings WHERE key = 'queue_open'`.catch(() => []),
+        ]);
+        const playing = playingRes.status === 204 ? null : await playingRes.json();
+        return res.json({
+          playing,
+          recentlyPlayed: recent.map(r => r.track_id),
+          queueOpen: settings[0]?.value !== "false",
+        });
       }
+
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
