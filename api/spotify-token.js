@@ -27,6 +27,5 @@ export default async function handler(req, res) {
     const token = await getToken();
     res.json({ token });
   } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    res.send(`✅ Inloggad! Din refresh token:<br><br><code>${data.refresh_token}</code><br><br>Kopiera den till Vercel Environment Variables som SPOTIFY_REFRESH_TOKEN.`);
 }
