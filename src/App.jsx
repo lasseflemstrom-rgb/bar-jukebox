@@ -378,20 +378,7 @@ export default function Jukebox() {
           </div>
         )}
 
-        {/* Låten är redan i kön */}
-        {paymentStep === "inQueue" && (
-          <div style={s.overlay} onClick={handleClose}>
-            <div style={s.modal} onClick={e => e.stopPropagation()}>
-              <div style={{ fontSize: 56 }}>⏳</div>
-              <div style={s.modalHeader}>REDAN I KÖN</div>
-              <div style={s.modalTitle}>{selected?.name}</div>
-              <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.5 }}>
-                Den här låten väntar redan på att spelas. Välj en annan låt!
-              </p>
-              <button style={s.modalPrimary} onClick={handleClose}>Välj annan låt</button>
-            </div>
-          </div>
-        )}
+        
 
         {/* Låten spelades nyligen */}
         {paymentStep === "recentlyPlayed" && (
@@ -401,7 +388,7 @@ export default function Jukebox() {
               <div style={s.modalHeader}>SPELADES NYLIGEN</div>
               <div style={s.modalTitle}>{selected?.name}</div>
               <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.5 }}>
-                Den här låten spelades nyss. Välj en annan låt!
+                Den här låten spelades nyss eller står redan i kön. Välj en annan låt!
               </p>
               <button style={s.modalPrimary} onClick={handleClose}>Välj annan låt</button>
             </div>
@@ -430,7 +417,7 @@ export default function Jukebox() {
               <div style={s.modalTitle}>{selected?.name}</div>
               <div style={s.modalArtist}>{selected?.artists.map(a => a.name).join(", ")}</div>
               <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.6 }}>
-                Din låt spelas strax!
+                Den kommer att spelas strax!
               </p>
               <p style={{ color: "#92400e", fontSize: 14, margin: 0 }}>Njut av musiken!</p>
               <button style={s.modalPrimary} onClick={handleClose}>Stäng</button>
