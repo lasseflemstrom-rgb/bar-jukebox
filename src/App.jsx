@@ -6,7 +6,7 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 // KONFIGURATION
 // ============================================================
 const CONFIG = {
-  STRIPE_PUBLISHABLE_KEY: "pk_test_51TazxlAiBeFbGSJSUmWzOombCWLtTwS1jf19caS6IgohzkL2DAzZpt9baz4U18bGt8mftZECI7Kg7xrccjnzPqtE00Gi7ZproV", // pk_test_...
+  STRIPE_PUBLISHABLE_KEY: "Ypk_test_51TazxlAiBeFbGSJSUmWzOombCWLtTwS1jf19caS6IgohzkL2DAzZpt9baz4U18bGt8mftZECI7Kg7xrccjnzPqtE00Gi7ZproV", // pk_test_...
   PRICE_PER_SONG: 15, // SEK
   MAX_QUEUE_SIZE: 3,
   TEST_MODE: true,
@@ -252,8 +252,8 @@ export default function Jukebox() {
     <>
       <style>{globalStyles}</style>
       <div style={s.app}>
-        {/* <div style={s.bubbleLeft} /> }
-        {/* <div style={s.bubbleRight} /> }
+        {/* <div style={s.bubbleLeft} /> */}
+        {/* <div style={s.bubbleRight} /> */}
 
         {testMode && (
           <div style={s.testRibbon}>
@@ -446,7 +446,7 @@ function SpotifyLogoWhiteSmall() {
 // ============================================================
 const globalStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Bebas+Neue&family=Lato:wght@400;700&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; overscroll-behavior-x: none; }
   html, body { background: #7a0000; font-family: 'Lato', sans-serif; overflow-x: hidden; touch-action: pan-y; }
 
   .track-row:hover { background: #fef9f0 !important; box-shadow: -4px 0 0 #c41e1e; }
