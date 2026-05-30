@@ -1,13 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
-// ============================================================
-// ADMIN PIN — ändra detta till ett eget lösenord
-// ============================================================
 const ADMIN_PIN = "1234";
 
-// ============================================================
-// API-HJÄLPARE
-// ============================================================
 async function adminGet(type) {
   const res = await fetch(`/api/admin?type=${type}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -27,9 +21,6 @@ async function adminPost(body) {
 const msToMin = (ms) =>
   `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
 
-// ============================================================
-// ADMIN-APP
-// ============================================================
 export default function Admin() {
   const [pin, setPin] = useState("");
   const [loggedIn, setLoggedIn] = useState(false);
@@ -43,36 +34,28 @@ export default function Admin() {
   const [log, setLog] = useState([]);
 
   const lastSongId = useRef(null);
-  const progressRef = useRef(0);
 
   const addLog = (msg) => {
     setLog(prev => [`${new Date().toLocaleTimeString()} — ${msg}`, ...prev].slice(0, 20));
   };
 
-  // Poll
   useEffect(() => {
     if (!loggedIn) return;
 
     const poll = async () => {
       try {
-        const playing = await adminGet("playing");
+        const { playing, queue: spotifyQueue, queueOpen: isOpen } = await adminGet("status");
         if (playing?.item) {
           setNowPlaying(playing.item);
           setIsPlaying(playing.is_playing);
           setProgressMs(playing.progress_ms || 0);
-          progressRef.current = playing.progress_ms || 0;
-
           if (playing.item.id !== lastSongId.current) {
             lastSongId.current = playing.item.id;
             addLog(`Spelar nu: ${playing.item.name}`);
           }
         }
-
-        const q = await adminGet("queue");
-        setQueue(q);
-
-        const settings = await adminGet("settings");
-        setQueueOpen(settings.queue_open !== "false");
+        setQueue(spotifyQueue);
+        setQueueOpen(isOpen);
       } catch {}
     };
 
@@ -81,15 +64,10 @@ export default function Admin() {
     return () => clearInterval(id);
   }, [loggedIn]);
 
-  // Smooth progress ticker
   useEffect(() => {
     if (!nowPlaying) return;
     const id = setInterval(() => {
-      setProgressMs(p => {
-        const next = p + 1000;
-        progressRef.current = next;
-        return next >= nowPlaying.duration_ms ? nowPlaying.duration_ms : next;
-      });
+      setProgressMs(p => Math.min(p + 1000, nowPlaying.duration_ms));
     }, 1000);
     return () => clearInterval(id);
   }, [nowPlaying?.id]);
@@ -109,18 +87,6 @@ export default function Admin() {
     adminPost({ action: "skip" });
     addLog("⏭ Hoppade över låt");
   };
-  const handleClearQueue = () => {
-    if (confirm("Rensa hela kön?")) {
-      adminPost({ action: "clearQueue" });
-      setQueue([]);
-      addLog("🗑 Kön rensad");
-    }
-  };
-  const handleRemove = (trackId, trackName) => {
-    adminPost({ action: "removeFromQueue", trackId });
-    setQueue(q => q.filter(t => t.track_id !== trackId));
-    addLog(`🗑 Tog bort: ${trackName}`);
-  };
   const handleOpenQueue = () => {
     adminPost({ action: "openQueue" });
     setQueueOpen(true);
@@ -137,9 +103,6 @@ export default function Admin() {
   const progressPct = nowPlaying ? (progressMs / nowPlaying.duration_ms) * 100 : 0;
   const remaining = nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0;
 
-  // ============================================================
-  // LOGIN
-  // ============================================================
   if (!loggedIn) {
     return (
       <div style={s.loginWrap}>
@@ -161,9 +124,6 @@ export default function Admin() {
     );
   }
 
-  // ============================================================
-  // ADMIN PANEL
-  // ============================================================
   return (
     <div style={s.app}>
       <header style={s.header}>
@@ -175,14 +135,14 @@ export default function Admin() {
             <button style={s.btnStart} onClick={handleOpenQueue}>🟢 Öppna kön</button>
           )}
           <div style={{ color: queueOpen ? "#86efac" : "#fca5a5", fontSize: 13, fontWeight: 700 }}>
-            {queueOpen ? "🟢 AUTO-KÖ AKTIV" : "🔒 KÖN STÄNGD"}
+            {queueOpen ? "🟢 KÖN ÖPPEN" : "🔒 KÖN STÄNGD"}
           </div>
         </div>
       </header>
 
       <div style={s.grid}>
 
-        {/* Nu spelar */}
+        {/* Spelar nu */}
         <div style={s.card}>
           <div style={s.cardTitle}>SPELAR NU</div>
           {nowPlaying ? (
@@ -217,26 +177,21 @@ export default function Admin() {
           )}
         </div>
 
-        {/* Kö */}
+        {/* Spotifys kö */}
         <div style={s.card}>
-          <div style={s.cardTitleRow}>
-            <div style={s.cardTitle}>KÖ ({queue.length} låtar)</div>
-            {queue.length > 0 && (
-              <button style={s.btnDanger} onClick={handleClearQueue}>Rensa kön</button>
-            )}
-          </div>
+          <div style={s.cardTitle}>KÖ ({queue.length} låtar)</div>
           {queue.length === 0 ? (
             <div style={s.empty}>Kön är tom</div>
           ) : (
             queue.map((track, i) => (
-              <div key={track.track_id} style={s.queueRow}>
+              <div key={track.id} style={s.queueRow}>
                 <div style={s.queueNum}>{i + 1}</div>
+                <img src={track.album?.images?.[2]?.url} style={s.queueArt} alt="" />
                 <div style={s.queueInfo}>
-                  <div style={s.queueName}>{track.track_name}</div>
-                  <div style={s.queueArtist}>{track.artist_name}</div>
+                  <div style={s.queueName}>{track.name}</div>
+                  <div style={s.queueArtist}>{track.artists?.map(a => a.name).join(", ")}</div>
                 </div>
                 <div style={s.queueDuration}>{msToMin(track.duration_ms)}</div>
-                <button style={s.btnRemove} onClick={() => handleRemove(track.track_id, track.track_name)}>✕</button>
               </div>
             ))
           )}
@@ -259,14 +214,10 @@ export default function Admin() {
   );
 }
 
-// ============================================================
-// STILAR
-// ============================================================
 const cream = "#f5e6c8";
 const red = "#c41e1e";
 const darkRed = "#7a0000";
 const chrome = "#e8d5a3";
-const warmBlack = "#1a0a00";
 
 const s = {
   loginWrap: { minHeight: "100vh", background: darkRed, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Lato', sans-serif" },
@@ -275,20 +226,15 @@ const s = {
   loginSub: { fontSize: 13, color: "#888", marginBottom: 8 },
   pinInput: { padding: "10px 16px", border: "2px solid", borderRadius: 8, fontSize: 18, textAlign: "center", fontFamily: "'Lato', sans-serif", outline: "none", letterSpacing: 8 },
   loginBtn: { background: red, color: "#fff", border: "none", borderRadius: 8, padding: "12px", fontSize: 15, fontWeight: 700, fontFamily: "'Lato', sans-serif", cursor: "pointer" },
-
   app: { minHeight: "100vh", background: "#1a1a1a", color: "#f0f0f0", fontFamily: "'Lato', sans-serif", paddingBottom: 60 },
   header: { background: darkRed, borderBottom: `3px solid ${chrome}`, padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" },
   headerTitle: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: cream, letterSpacing: 3 },
-  jukeboxToggle: {},
   btnStart: { background: "#22c55e", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Lato', sans-serif" },
   btnStop: { background: "#ef4444", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "'Lato', sans-serif" },
-
   grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, padding: 16, maxWidth: 900, margin: "0 auto" },
   card: { background: "#2a2a2a", borderRadius: 12, padding: 20, border: "1px solid #444" },
   cardTitle: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: chrome, letterSpacing: 3, marginBottom: 16 },
-  cardTitleRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
   empty: { color: "#666", fontStyle: "italic", fontSize: 14 },
-
   nowPlayingRow: { display: "flex", gap: 12, marginBottom: 12, alignItems: "center" },
   albumArt: { width: 64, height: 64, borderRadius: 6, flexShrink: 0 },
   trackName: { fontSize: 16, fontWeight: 700, color: "#fff" },
@@ -298,17 +244,12 @@ const s = {
   progressFill: { height: "100%", background: "#ff6b35", borderRadius: 2, transition: "width 1s linear" },
   controls: { display: "flex", gap: 8 },
   btnControl: { background: "#444", color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "'Lato', sans-serif" },
-
   queueRow: { display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #333" },
   queueNum: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: red, width: 24, textAlign: "center" },
+  queueArt: { width: 36, height: 36, borderRadius: 4, flexShrink: 0 },
   queueInfo: { flex: 1, minWidth: 0 },
   queueName: { fontSize: 14, fontWeight: 700, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
   queueArtist: { fontSize: 12, color: "#aaa" },
   queueDuration: { fontSize: 12, color: "#666", flexShrink: 0 },
-  btnRemove: { background: "#ef444430", color: "#ef4444", border: "1px solid #ef444460", borderRadius: 6, padding: "4px 8px", fontSize: 12, cursor: "pointer", fontFamily: "'Lato', sans-serif" },
-  btnDanger: { background: "transparent", color: "#ef4444", border: "1px solid #ef4444", borderRadius: 6, padding: "4px 10px", fontSize: 12, cursor: "pointer", fontFamily: "'Lato', sans-serif" },
-
   logEntry: { fontSize: 12, color: "#888", padding: "4px 0", borderBottom: "1px solid #333" },
-
-  activeBar: { position: "fixed", bottom: 0, left: 0, right: 0, background: "#14532d", color: "#86efac", padding: "10px 16px", textAlign: "center", fontSize: 13, fontWeight: 700 },
 };
