@@ -69,6 +69,9 @@ export default async function handler(req, res) {
         }
         all.sort((a, b) => a.name.localeCompare(b.name, "sv"));
         return res.json(all);
+      } else if (type === "recentlyplayed") {
+        const rows = await sql`SELECT track_id FROM recently_played ORDER BY played_at DESC LIMIT 8`;
+        return res.json(rows.map(r => r.track_id));
       } else if (type === "playing") {
         const r = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
           headers: { Authorization: "Bearer " + token },

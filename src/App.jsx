@@ -25,15 +25,6 @@ async function apiGet(type) {
   return res.json();
 }
 
-async function apiAddToQueue(uri, trackId, duration_ms, trackName, artistName) {
-  const res = await fetch("/api/queue", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ uri, trackId, duration_ms, trackName, artistName }),
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
-}
 
 async function checkTrack(trackId) {
   const res = await fetch("/api/check-track", {
@@ -124,6 +115,7 @@ export default function Jukebox() {
   const [testMode, setTestMode] = useState(CONFIG.TEST_MODE);
   const [backendError, setBackendError] = useState(null);
   const [sessionQueueCount, setSessionQueueCount] = useState(0);
+  const [recentlyPlayed, setRecentlyPlayed] = useState([]);
   const lastSongId = useRef(null);
 
   const queueFull = sessionQueueCount >= CONFIG.MAX_QUEUE_SIZE;
@@ -157,6 +149,8 @@ export default function Jukebox() {
         // Hämta om kön är öppen
         const settings = await fetch("/api/admin?type=settings").then(r => r.json()).catch(() => ({}));
         setQueueOpen(settings.queue_open !== "false");
+        const recent = await apiGet("recentlyplayed");
+        setRecentlyPlayed(recent || []);
       } catch {}
     };
     poll();
@@ -193,11 +187,10 @@ export default function Jukebox() {
     if (queueFull) { setSelected(track); setPaymentStep("full"); return; }
 
     const artistName = track.artists.map(a => a.name).join(", ");
-    const check = await checkTrack(track.id);
-    if (check.blocked) {
-      setSelected(track);
-      setPaymentStep("recentlyPlayed");
-      return;
+    if (recentlyPlayed.includes(track.id)) {
+     setSelected(track);
+     setPaymentStep("recentlyPlayed");
+     return;
     }
 
     setSelected(track);
