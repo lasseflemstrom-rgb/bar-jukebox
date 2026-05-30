@@ -20,26 +20,23 @@ async function getToken() {
   return data.access_token;
 }
 
-export default async function handler(req, res) {
-  try {
-    // Kolla om det finns låtar i kön
-    const rows = await sql`SELECT * FROM guest_queue ORDER BY added_at ASC LIMIT 1`;
-    if (remaining > 20000) {
-  // Schemalägg nästa anrop om (remaining - 20 sek)
-  const delay = Math.max(5, Math.floor((remaining - 20000) / 1000));
+async function scheduleNext(delaySeconds) {
   await fetch("https://qstash.upstash.io/v2/publish/https://bar-jukebox.vercel.app/api/cron", {
     method: "POST",
     headers: {
       Authorization: "Bearer " + process.env.QSTASH_TOKEN,
       "Content-Type": "application/json",
-      "Upstash-Delay": delay + "s",
+      "Upstash-Delay": delaySeconds + "s",
     },
     body: JSON.stringify({}),
   });
-  return res.json({ status: "waiting", remaining, nextCheck: delay });
 }
 
-    // Kolla nuvarande uppspelning
+export default async function handler(req, res) {
+  try {
+    const rows = await sql`SELECT * FROM guest_queue ORDER BY added_at ASC LIMIT 1`;
+    if (rows.length === 0) return res.json({ status: "empty" });
+
     const token = await getToken();
     const playbackRes = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
       headers: { Authorization: "Bearer " + token },
@@ -51,12 +48,13 @@ export default async function handler(req, res) {
 
     const remaining = playback.item.duration_ms - (playback.progress_ms || 0);
 
-    // Trigga om 20 sekunder kvar
-    if (remaining > 20000) return res.json({ status: "waiting", remaining });
+    if (remaining > 20000) {
+      const delay = Math.max(5, Math.floor((remaining - 20000) / 1000));
+      await scheduleNext(delay);
+      return res.json({ status: "waiting", remaining, nextCheck: delay });
+    }
 
     const next = rows[0];
-
-    // Lägg till i Spotify
     const spotifyRes = await fetch("https://api.spotify.com/v1/me/player/queue?uri=spotify:track:" + next.track_id, {
       method: "POST",
       headers: { Authorization: "Bearer " + token },
@@ -67,7 +65,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "Spotify: " + text });
     }
 
-    // Flytta till recently_played och ta bort från kön
     await sql`INSERT INTO recently_played (track_id, track_name, played_at) VALUES (${next.track_id}, ${next.track_name}, ${Date.now()}) ON CONFLICT (track_id) DO UPDATE SET played_at = ${Date.now()}`;
     await sql`DELETE FROM guest_queue WHERE track_id = ${next.track_id}`;
 
