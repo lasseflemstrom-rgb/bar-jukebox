@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+
+  
+  import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -56,18 +58,12 @@ async function createPaymentIntent(amount, trackName, trackUri) {
 const msToMin = (ms) =>
   `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
 
-const formatWait = (ms) => {
-  if (ms <= 0) return null;
-  if (ms < 60000) return `~${Math.ceil(ms / 1000)}s`;
-  return `~${Math.ceil(ms / 60000)} min`;
-};
-
 const LOGO_SRC = "/Neon_Needle_logo.png";
 
 // ============================================================
 // BETALNINGSFORMULÄR
 // ============================================================
-function CheckoutForm({ track, onSuccess, onCancel, waitText }) {
+function CheckoutForm({ track, onSuccess, onCancel }) {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -98,7 +94,6 @@ function CheckoutForm({ track, onSuccess, onCancel, waitText }) {
       <div style={s.modalTitle}>{track.name}</div>
       <div style={s.modalArtist}>{track.artists.map(a => a.name).join(", ")}</div>
       <div style={s.modalPrice}>{CONFIG.PRICE_PER_SONG} kr</div>
-      <div style={s.modalWait}>{waitText}</div>
       <div style={{ background: "#fff", padding: 16, borderRadius: 8, border: `1px solid ${chrome}` }}>
         <PaymentElement />
       </div>
@@ -120,7 +115,6 @@ export default function Jukebox() {
   const [search, setSearch] = useState("");
   const [nowPlaying, setNowPlaying] = useState(null);
   const [progressMs, setProgressMs] = useState(0);
-  const [spotifyQueue, setSpotifyQueue] = useState([]);
   const [queueOpen, setQueueOpen] = useState(true);
   const [selected, setSelected] = useState(null);
   const [paymentStep, setPaymentStep] = useState(null);
@@ -129,7 +123,10 @@ export default function Jukebox() {
   const [notification, setNotification] = useState(null);
   const [testMode, setTestMode] = useState(CONFIG.TEST_MODE);
   const [backendError, setBackendError] = useState(null);
+  const [sessionQueueCount, setSessionQueueCount] = useState(0);
   const lastSongId = useRef(null);
+
+  const queueFull = sessionQueueCount >= CONFIG.MAX_QUEUE_SIZE;
 
   // Ladda spellista från backend
   useEffect(() => {
@@ -138,7 +135,7 @@ export default function Jukebox() {
       .catch((err) => { setBackendError(err.message); setLoading(false); });
   }, []);
 
-  // Polla nuvarande låt och kö från backend
+  // Polla nuvarande låt från backend
   useEffect(() => {
     const poll = async () => {
       try {
@@ -157,7 +154,6 @@ export default function Jukebox() {
           }
           setNowPlaying(playback.item);
         }
-
         // Hämta om kön är öppen
         const settings = await fetch("/api/admin?type=settings").then(r => r.json()).catch(() => ({}));
         setQueueOpen(settings.queue_open !== "false");
@@ -192,26 +188,15 @@ export default function Jukebox() {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Använd gästkön från Blob — alltid korrekt även vid sidomladdning
-  // Håll koll på hur många låtar gästen köat i denna session
-  const [sessionQueueCount, setSessionQueueCount] = useState(0);
-  const queueFull = sessionQueueCount >= CONFIG.MAX_QUEUE_SIZE;
-
   const handleSelectSong = async (track) => {
     if (!queueOpen) { notify("Kön är stängd för ikväll.", "error"); return; }
     if (queueFull) { setSelected(track); setPaymentStep("full"); return; }
 
-    // Kolla dubbletter
     const artistName = track.artists.map(a => a.name).join(", ");
     const check = await checkTrack(track.id);
     if (check.blocked) {
-      if (check.reason === "inQueue") {
-        setSelected(track);
-        setPaymentStep("inQueue");
-      } else {
-        setSelected(track);
-        setPaymentStep("recentlyPlayed");
-      }
+      setSelected(track);
+      setPaymentStep("recentlyPlayed");
       return;
     }
 
@@ -252,8 +237,8 @@ export default function Jukebox() {
     <>
       <style>{globalStyles}</style>
       <div style={s.app}>
-        {/* <div style={s.bubbleLeft} /> */}
-        {/* <div style={s.bubbleRight} /> */}
+        <div style={s.bubbleLeft} />
+        <div style={s.bubbleRight} />
 
         {testMode && (
           <div style={s.testRibbon}>
@@ -267,7 +252,7 @@ export default function Jukebox() {
             <div style={s.headerLogoWrap}>
               <img
                 src={LOGO_SRC}
-                alt="Neon Needle Jukebox"
+                alt="Musikmaskinen Jukebox"
                 style={s.headerLogo}
                 onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "block"; }}
               />
@@ -371,14 +356,11 @@ export default function Jukebox() {
                   track={selected}
                   onSuccess={handlePaymentSuccess}
                   onCancel={handleClose}
-                  waitText={waitText}
                 />
               </Elements>
             </div>
           </div>
         )}
-
-        
 
         {/* Låten spelades nyligen */}
         {paymentStep === "recentlyPlayed" && (
@@ -446,14 +428,14 @@ function SpotifyLogoWhiteSmall() {
 // ============================================================
 const globalStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Bebas+Neue&family=Lato:wght@400;700&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; overscroll-behavior-x: none; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { background: #7a0000; font-family: 'Lato', sans-serif; overflow-x: hidden; touch-action: pan-y; }
-
   .track-row:hover { background: #fef9f0 !important; box-shadow: -4px 0 0 #c41e1e; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes bubbleFloat { 0%, 100% { transform: translateY(0px) scale(1); } 50% { transform: translateY(-20px) scale(1.02); } }
   @keyframes neonPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.85; } }
 `;
+
 const cream = "#f5e6c8";
 const red = "#c41e1e";
 const darkRed = "#7a0000";
@@ -473,7 +455,7 @@ const s = {
   headerLogo: { height: 72, width: "auto", display: "block", filter: "drop-shadow(0 0 8px rgba(255,107,53,0.5))", animation: "neonPulse 3s ease-in-out infinite", mixBlendMode: "lighten" },
   fallbackNeonSmall: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: "#ff3b3b", letterSpacing: 3, textShadow: "0 0 10px #ff3b3b" },
   fallbackSubSmall: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 9, color: chrome, letterSpacing: 5, opacity: 0.7 },
-  nowPlaying: { display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.25)", border: `1px solid ${chrome}40`, borderRadius: 8, padding: "8px 12px", maxWidth: 220, flex: 1 },
+  nowPlaying: { display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,0.25)", border: `1px solid ${chrome}40`, borderRadius: 8, padding: "8px 12px", maxWidth: 220, flex: 1, overflow: "hidden" },
   nowPlayingArt: { width: 40, height: 40, borderRadius: 4, flexShrink: 0, border: `1px solid ${chrome}40` },
   nowPlayingText: { minWidth: 0, flex: 1 },
   nowPlayingLabel: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 9, color: amber, letterSpacing: 2 },
@@ -493,7 +475,7 @@ const s = {
   clearBtn: { background: "none", border: "none", cursor: "pointer", color: "#999", fontSize: 14, padding: "4px" },
   trackList: { padding: "8px 16px", display: "flex", flexDirection: "column", gap: 6, position: "relative", zIndex: 1, maxWidth: "100%", boxSizing: "border-box" },
   emptyMsg: { textAlign: "center", color: "#999", padding: 40, fontStyle: "italic" },
-  trackRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#fff", border: `1px solid ${chrome}80`, borderRadius: 8, transition: "all 0.15s ease", animation: "fadeIn 0.4s ease both", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden", maxWidth: "100%" }, 
+  trackRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#fff", border: `1px solid ${chrome}80`, borderRadius: 8, transition: "all 0.15s ease", animation: "fadeIn 0.4s ease both", boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden", maxWidth: "100%" },
   trackArt: { width: 44, height: 44, borderRadius: 4, flexShrink: 0, background: "#eee", border: `1px solid ${chrome}` },
   trackInfo: { flex: 1, minWidth: 0 },
   trackName: { fontSize: 14, fontWeight: 700, color: warmBlack, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
@@ -511,12 +493,9 @@ const s = {
   modalTitle: { fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 700, color: warmBlack, lineHeight: 1.2 },
   modalArtist: { fontSize: 14, color: "#666" },
   modalPrice: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 48, color: red, letterSpacing: 2, lineHeight: 1 },
-  modalWait: { fontSize: 13, color: "#666", background: "#fff", border: `1px solid ${chrome}`, borderRadius: 50, padding: "4px 16px", display: "inline-block", alignSelf: "center" },
   modalPrimary: { background: red, color: "#fff", border: "none", borderRadius: 50, padding: "14px 32px", fontSize: 15, fontWeight: 700, fontFamily: "'Lato', sans-serif", cursor: "pointer", letterSpacing: 0.5, boxShadow: `0 4px 20px ${red}60` },
   modalGhost: { background: "transparent", color: "#999", border: `1px solid ${chrome}`, borderRadius: 50, padding: "10px 24px", fontSize: 13, fontFamily: "'Lato', sans-serif", cursor: "pointer" },
-  successIcon: { fontSize: 56 },
 };
-  
 
   
   
