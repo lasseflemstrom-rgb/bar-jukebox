@@ -1,12 +1,11 @@
 import { neon } from "@neondatabase/serverless";
+import { getToken } from "./spotify-token.js";
+
 const sql = neon(process.env.DATABASE_URL);
 
 async function initDb() {
   await sql`CREATE TABLE IF NOT EXISTS recently_played (track_id TEXT PRIMARY KEY, track_name TEXT, played_at BIGINT NOT NULL)`;
 }
-
-// Token-cache
-import { getToken } from "./spotify-token.js";
 
 export default async function handler(req, res) {
   await initDb();

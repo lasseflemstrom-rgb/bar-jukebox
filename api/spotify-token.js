@@ -1,35 +1,32 @@
-import { list, put } from "@vercel/blob";
+let cachedToken = null;
+let tokenExpiry = 0;
 
 export async function getToken() {
-  // Hitta blob via list
-  const { blobs } = await list({ prefix: "spotify-token" });
-  if (!blobs.length) throw new Error("Ingen token – logga in på /api/auth");
-  
-  const blobRes = await fetch(blobs[0].url);
-  const tokenData = await blobRes.json();
-  
-  if (tokenData.access_token && Date.now() < tokenData.expires_at) {
-    return tokenData.access_token;
-  }
-  
+  if (cachedToken && Date.now() < tokenExpiry) return cachedToken;
+  const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN;
+  if (!refreshToken) throw new Error("Ingen refresh token");
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "refresh_token",
-      refresh_token: tokenData.refresh_token,
+      refresh_token: refreshToken,
       client_id: process.env.SPOTIFY_CLIENT_ID,
       client_secret: process.env.SPOTIFY_CLIENT_SECRET,
     }),
   });
   const data = await res.json();
-  if (!data.access_token) throw new Error("Token-förnyelse misslyckades");
-  
-  await put("spotify-token.json", JSON.stringify({
-    access_token: data.access_token,
-    refresh_token: data.refresh_token || tokenData.refresh_token,
-    expires_at: Date.now() + (data.expires_in - 60) * 1000,
-  }), { access: "public", allowOverwrite: true });
-  
-  return data.access_token;
+  if (!data.access_token) throw new Error("Token misslyckades");
+  cachedToken = data.access_token;
+  tokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+  return cachedToken;
+}
+
+export default async function handler(req, res) {
+  try {
+    const token = await getToken();
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 }
