@@ -252,8 +252,8 @@ export default function Jukebox() {
     <>
       <style>{globalStyles}</style>
       <div style={s.app}>
-        {/* <div style={s.bubbleLeft} /> */}
-        {/* <div style={s.bubbleRight} /> */}
+        {/* <div style={s.bubbleLeft} /> }
+        {/* <div style={s.bubbleRight} /> }
 
         {testMode && (
           <div style={s.testRibbon}>
@@ -446,7 +446,7 @@ function SpotifyLogoWhiteSmall() {
 // ============================================================
 const globalStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Bebas+Neue&family=Lato:wght@400;700&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; overscroll-behavior-x: none; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { background: #7a0000; font-family: 'Lato', sans-serif; overflow-x: hidden; touch-action: pan-y; }
 
   .track-row:hover { background: #fef9f0 !important; box-shadow: -4px 0 0 #c41e1e; }
