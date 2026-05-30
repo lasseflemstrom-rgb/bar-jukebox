@@ -8,7 +8,6 @@ async function initDb() {
   await sql`INSERT INTO settings (key, value) VALUES ('queue_open', 'true') ON CONFLICT (key) DO NOTHING`;
 }
 
-// Token-cache
 let cachedToken = null;
 let tokenExpiry = 0;
 
@@ -67,10 +66,34 @@ export default async function handler(req, res) {
         queueOpen: settings.queue_open !== "false",
       });
     }
+
+    if (type === "playlist") {
+      const token = await getToken();
+      let all = [];
+      let url = "https://api.spotify.com/v1/playlists/" + process.env.SPOTIFY_PLAYLIST_ID + "/items?limit=50";
+      while (url) {
+        const r = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+        const data = await r.json();
+        all = all.concat(data.items.filter(i => i.track).map(i => i.track));
+        url = data.next || null;
+      }
+      all.sort((a, b) => a.name.localeCompare(b.name, "sv"));
+      return res.json(all);
+    }
+
+    if (type === "search") {
+      const token = await getToken();
+      const q = req.query.q;
+      const r = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(q)}&type=track&limit=10&market=SE`, {
+        headers: { Authorization: "Bearer " + token },
+      });
+      const data = await r.json();
+      return res.json(data.tracks?.items || []);
+    }
   }
 
   if (req.method === "POST") {
-    const { action } = req.body;
+    const { action, uri } = req.body;
     const token = await getToken();
 
     if (action === "play") {
@@ -91,6 +114,22 @@ export default async function handler(req, res) {
     }
     if (action === "closeQueue") {
       await sql`UPDATE settings SET value = 'false' WHERE key = 'queue_open'`;
+      return res.json({ success: true });
+    }
+    if (action === "addToPlaylist") {
+      await fetch(`https://api.spotify.com/v1/playlists/${process.env.SPOTIFY_PLAYLIST_ID}/tracks`, {
+        method: "POST",
+        headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+        body: JSON.stringify({ uris: [uri] }),
+      });
+      return res.json({ success: true });
+    }
+    if (action === "removeFromPlaylist") {
+      await fetch(`https://api.spotify.com/v1/playlists/${process.env.SPOTIFY_PLAYLIST_ID}/tracks`, {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+        body: JSON.stringify({ tracks: [{ uri }] }),
+      });
       return res.json({ success: true });
     }
   }
