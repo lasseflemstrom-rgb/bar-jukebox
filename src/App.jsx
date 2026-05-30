@@ -490,7 +490,7 @@ const s = {
   searchNote: { fontSize: 16, marginRight: 8, opacity: 0.5 },
   searchInput: { flex: 1, border: "none", outline: "none", padding: "12px 0", fontSize: 15, fontFamily: "'Lato', sans-serif", color: warmBlack, background: "transparent" },
   clearBtn: { background: "none", border: "none", cursor: "pointer", color: "#999", fontSize: 14, padding: "4px" },
-  trackList: { padding: "8px 16px", display: "flex", flexDirection: "column", gap: 6, position: "relative", zIndex: 1 },
+  trackList: { padding: "8px 16px", display: "flex", flexDirection: "column", gap: 6, position: "relative", zIndex: 1, maxWidth: "100%", boxSizing: "border-box" },
   emptyMsg: { textAlign: "center", color: "#999", padding: 40, fontStyle: "italic" },
   trackRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#fff", border: `1px solid ${chrome}80`, borderRadius: 8, transition: "all 0.15s ease", animation: "fadeIn 0.4s ease both", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" },
   trackArt: { width: 44, height: 44, borderRadius: 4, flexShrink: 0, background: "#eee", border: `1px solid ${chrome}` },
