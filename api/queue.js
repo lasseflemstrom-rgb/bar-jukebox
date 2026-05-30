@@ -27,53 +27,37 @@ async function getToken() {
   return data.access_token;
 }
 
-async function scheduleNextCron(delayMs) {
-  // Schemalägg QStash att anropa /api/cron om delayMs millisekunder
-  const delaySeconds = Math.max(5, Math.floor(delayMs / 1000));
-  try {
-    await fetch("https://qstash.upstash.io/v2/publish/https://bar-jukebox.vercel.app/api/cron", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + process.env.QSTASH_TOKEN,
-        "Content-Type": "application/json",
-        "Upstash-Delay": delaySeconds + "s",
-      },
-      body: JSON.stringify({}),
-    });
-    console.log("Schemalade cron om", delaySeconds, "sekunder");
-  } catch (err) {
-    console.log("QStash schemaläggning misslyckades:", err.message);
-  }
-}
-
 export default async function handler(req, res) {
   await initDb();
 
- if (req.method === "POST") {
-  const { uri, trackId, duration_ms, trackName, artistName } = req.body;
-  try {
-    const token = await getToken();
-    const spotifyRes = await fetch("https://api.spotify.com/v1/me/player/queue?uri=" + encodeURIComponent(uri), {
-      method: "POST",
-      headers: { Authorization: "Bearer " + token },
-    });
-    if (!spotifyRes.ok) {
-      const text = await spotifyRes.text();
-      return res.status(500).json({ error: "Spotify: " + spotifyRes.status + " " + text });
+  if (req.method === "POST") {
+    const { uri, trackId, duration_ms, trackName, artistName } = req.body;
+    try {
+      const token = await getToken();
+      const spotifyRes = await fetch("https://api.spotify.com/v1/me/player/queue?uri=" + encodeURIComponent(uri), {
+        method: "POST",
+        headers: { Authorization: "Bearer " + token },
+      });
+      if (!spotifyRes.ok) {
+        const text = await spotifyRes.text();
+        return res.status(500).json({ error: "Spotify: " + spotifyRes.status + " " + text });
+      }
+      if (trackId && duration_ms) {
+        await sql`
+          INSERT INTO guest_queue (track_id, track_name, artist_name, duration_ms, added_at)
+          VALUES (${trackId}, ${trackName || ""}, ${artistName || ""}, ${duration_ms}, ${Date.now()})
+          ON CONFLICT (track_id) DO UPDATE SET added_at = ${Date.now()}
+        `;
+      }
+      return res.json({ success: true });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
     }
-    // Spara i databasen för dubblettskydd och köinfo
-    if (trackId && duration_ms) {
-      await sql`
-        INSERT INTO guest_queue (track_id, track_name, artist_name, duration_ms, added_at)
-        VALUES (${trackId}, ${trackName || ""}, ${artistName || ""}, ${duration_ms}, ${Date.now()})
-        ON CONFLICT (track_id) DO UPDATE SET added_at = ${Date.now()}
-      `;
-    }
-    return res.json({ success: true });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
   }
-}
+
+  if (req.method === "GET") {
+    const type = req.query.type;
+    const nowPlayingId = req.query.nowPlayingId;
 
     if (type === "guestqueue") {
       try {
