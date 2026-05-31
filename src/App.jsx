@@ -1,5 +1,5 @@
 
-
+  
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -116,6 +116,7 @@ export default function Jukebox() {
   const [backendError, setBackendError] = useState(null);
   const [guestQueue, setGuestQueue] = useState([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState([]);
+  const [showWelcome, setShowWelcome] = useState(true);
   const lastSongId = useRef(null);
 
   const guestQueueCount = guestQueue.length;
@@ -273,19 +274,6 @@ export default function Jukebox() {
           </div>
         </header>
 
-        <div style={s.queueStrip}>
-          <div style={s.queueStripInner}>
-            {!queueOpen ? (
-              <span style={{ color: "#fca5a5" }}>🔒 Kön är stängd för ikväll</span>
-            ) : queueFull ? (
-              <span style={{ color: "#fca5a5" }}>⛔ Kön är full — prova igen snart!</span>
-            ) : (
-              <span>🎵 Välj en låt du vill höra! Den spelas alldeles strax!</span>
-            )}
-            {!testMode && queueOpen && <span style={s.queuePrice}>{CONFIG.PRICE_PER_SONG} kr / låt</span>}
-          </div>
-        </div>
-
         {guestQueueCount > 0 && (
           <div style={s.guestQueueStrip}>
             <div style={s.guestQueueTitle}>🎶 I KÖN</div>
@@ -353,6 +341,34 @@ export default function Jukebox() {
             <SpotifyLogoWhiteSmall />
           </div>
         </footer>
+
+        {/* Välkomstmodal */}
+        {showWelcome && (
+          <div style={s.overlay}>
+            <div style={s.modal} onClick={e => e.stopPropagation()}>
+              <img
+                src={LOGO_SRC}
+                alt="Musikmaskinen"
+                style={{ height: 80, width: "auto", margin: "0 auto", display: "block" }}
+                onError={(e) => e.target.style.display = "none"}
+              />
+              <div style={s.modalHeader}>VÄLKOMMEN!</div>
+              {!queueOpen ? (
+                <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.6 }}>
+                  🔒 Kön är stängd för ikväll.
+                </p>
+              ) : (
+                <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.6 }}>
+                  Välj en låt från listan och lägg till den i jukebox!
+                  {!testMode && <><br /><strong style={{ color: red }}>Kostar {CONFIG.PRICE_PER_SONG} kr per låt.</strong></>}
+                </p>
+              )}
+              <button style={s.modalPrimary} onClick={() => setShowWelcome(false)}>
+                {queueOpen ? "Välj låt! 🎵" : "Se spellistan"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {selected && paymentStep === "pay" && clientSecret && (
           <div style={s.overlay} onClick={handleClose}>
@@ -455,9 +471,6 @@ const s = {
   progressBar: { height: 2, background: "rgba(255,255,255,0.2)", borderRadius: 1, marginTop: 4, overflow: "hidden" },
   progressFill: { height: "100%", background: amber, borderRadius: 1, transition: "width 1s linear" },
   noPlayback: { fontSize: 12, color: cream, opacity: 0.5, fontStyle: "italic" },
-  queueStrip: { background: warmBlack, borderBottom: `2px solid ${chrome}30`, position: "relative", zIndex: 5 },
-  queueStripInner: { padding: "8px 16px", fontSize: 15, color: cream, opacity: 0.85, display: "flex", justifyContent: "space-between", alignItems: "center" },
-  queuePrice: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: amber, letterSpacing: 1 },
   guestQueueStrip: { background: "#2a0a00", borderBottom: `1px solid ${chrome}20`, padding: "10px 16px", zIndex: 4 },
   guestQueueTitle: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 13, color: amber, letterSpacing: 3, marginBottom: 6 },
   guestQueueRow: { display: "flex", alignItems: "center", gap: 8, padding: "3px 0" },
