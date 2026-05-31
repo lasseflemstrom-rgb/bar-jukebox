@@ -64,12 +64,13 @@ export default async function handler(req, res) {
         return res.json(all);
 
       } else if (type === "recentlyplayed") {
+        await sql`DELETE FROM recently_played WHERE played_at < ${Date.now() - 90 * 60 * 1000}`;
         const rows = await sql`SELECT track_id FROM recently_played ORDER BY played_at DESC LIMIT 8`;
         return res.json(rows.map(r => r.track_id));
 
       } else if (type === "guestqueue") {
-        // Rensa gamla låtar (>60 min)
         await sql`DELETE FROM guest_queue WHERE added_at < ${Date.now() - 60 * 60 * 1000}`;
+        await sql`DELETE FROM recently_played WHERE played_at < ${Date.now() - 90 * 60 * 1000}`;
         const rows = await sql`SELECT * FROM guest_queue ORDER BY added_at ASC`;
         return res.json(rows);
 
@@ -81,16 +82,16 @@ export default async function handler(req, res) {
         return res.json(await r.json());
 
       } else if (type === "status") {
-        // Rensa gamla låtar (>60 min)
+        // Rensa gamla poster
         await sql`DELETE FROM guest_queue WHERE added_at < ${Date.now() - 60 * 60 * 1000}`;
+        await sql`DELETE FROM recently_played WHERE played_at < ${Date.now() - 90 * 60 * 1000}`;
 
-        const [playingRes, recent, settings, guestQueue] = await Promise.all([
+        const [playingRes, recent, settings] = await Promise.all([
           fetch("https://api.spotify.com/v1/me/player/currently-playing", {
             headers: { Authorization: "Bearer " + token },
           }),
           sql`SELECT track_id FROM recently_played ORDER BY played_at DESC LIMIT 8`,
           sql`SELECT value FROM settings WHERE key = 'queue_open'`.catch(() => []),
-          sql`SELECT * FROM guest_queue ORDER BY added_at ASC`,
         ]);
 
         const playing = playingRes.status === 204 ? null : await playingRes.json();
