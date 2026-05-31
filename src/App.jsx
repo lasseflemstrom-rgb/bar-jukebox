@@ -1,6 +1,5 @@
 
   
-  
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -241,22 +240,8 @@ export default function Jukebox() {
 
         {/* HEADER */}
         <header style={s.header}>
-          <div style={s.headerDeco}>— 1 0 1 5 —</div>
-
-          {/* KROM-RAM RUNT LOGON */}
-          <div style={s.logoFrame}>
-            <div style={s.logoFrameInner}>
-              <img
-                src={LOGO_SRC}
-                alt="Musikmaskinen Jukebox"
-                style={s.headerLogo}
-                onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
-              />
-              <div style={{ display: "none", flexDirection: "column", alignItems: "center", padding: "8px 0" }}>
-                <div style={s.neonTitle}>MUSIK</div>
-                <div style={s.neonSubtitle}>MASKINEN</div>
-              </div>
-            </div>
+          <div style={s.logoWrap}>
+            <img src={LOGO_SRC} alt="Musikmaskinen Jukebox" style={s.headerLogo} />
           </div>
 
           {nowPlaying && (
@@ -272,8 +257,6 @@ export default function Jukebox() {
               </div>
             </div>
           )}
-
-          <div style={s.headerBottom}>— JUKEBOX —</div>
         </header>
 
         {/* KÖ-BILJETTER */}
@@ -372,13 +355,7 @@ export default function Jukebox() {
         {showWelcome && (
           <div style={s.overlay}>
             <div style={s.modal} onClick={e => e.stopPropagation()}>
-              <div style={s.modalDeco}>— 1 0 1 5 —</div>
-              <img
-                src={LOGO_SRC}
-                alt="Musikmaskinen"
-                style={{ height: 80, width: "auto", margin: "0 auto", display: "block" }}
-                onError={(e) => e.target.style.display = "none"}
-              />
+              <img src={LOGO_SRC} alt="Musikmaskinen" style={{ height: 100, width: "auto", margin: "0 auto", display: "block" }} />
               <div style={s.modalHeader}>VÄLKOMMEN!</div>
               <div style={s.modalDivider} />
               {!queueOpen ? (
@@ -392,7 +369,6 @@ export default function Jukebox() {
               <button style={s.btnNeon} onClick={() => setShowWelcome(false)}>
                 {queueOpen ? "VÄLJ LÅT ♫" : "SE SPELLISTAN"}
               </button>
-              <div style={s.modalBottom}>— JUKEBOX —</div>
             </div>
           </div>
         )}
@@ -470,9 +446,9 @@ const globalStyles = `
   .track-row { transition: all 0.15s ease; }
   .track-row:active { transform: scale(0.98); }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes neonPulse { 0%, 100% { text-shadow: 0 0 10px #ff2222, 0 0 20px #ff2222, 0 0 40px #ff2222; } 50% { text-shadow: 0 0 5px #ff2222, 0 0 10px #ff2222; } }
+  @keyframes neonPulse { 0%, 100% { text-shadow: 0 0 10px #ff2222, 0 0 20px #ff2222; } 50% { text-shadow: 0 0 5px #ff2222; } }
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-  input::placeholder { color: #666; }
+  input::placeholder { color: #888; }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: #111; }
   ::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
@@ -483,7 +459,6 @@ const amber = "#d4920a";
 const chrome = "#c8b470";
 const cream = "#f0e8cc";
 const darkBg = "#0f0f0f";
-const warmBlack = "#1a0a00";
 
 const s = {
   app: {
@@ -521,70 +496,32 @@ const s = {
 
   // HEADER
   header: {
-    background: `linear-gradient(180deg, #1a0800 0%, #0f0f0f 100%)`,
-    borderBottom: `3px solid ${chrome}`,
+    background: "#0a0a0a",
+    borderBottom: `2px solid ${chrome}40`,
     position: "sticky",
     top: 0,
     zIndex: 10,
-    boxShadow: "0 4px 30px rgba(0,0,0,0.8)",
-    paddingBottom: 8,
+    boxShadow: "0 4px 20px rgba(0,0,0,0.8)",
   },
-  headerDeco: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 11,
-    color: chrome,
-    letterSpacing: 6,
-    opacity: 0.6,
-    textAlign: "center",
-    paddingTop: 6,
-  },
-
-  // KROM-RAM
-  logoFrame: {
-    margin: "6px 16px 0",
-    background: `linear-gradient(145deg, #d4c070, #a08040, #d4c070, #806030, #d4c070)`,
-    borderRadius: 16,
-    padding: 3,
-    boxShadow: "0 2px 12px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,220,100,0.3)",
-  },
-  logoFrameInner: {
-    background: "#0a0a0a",
-    borderRadius: 13,
-    padding: "10px 16px",
+  logoWrap: {
     display: "flex",
     justifyContent: "center",
-    alignItems: "center",
-    minHeight: 80,
+    padding: "12px 16px 8px",
   },
   headerLogo: {
-    height: 64,
+    height: 130,
     width: "auto",
     display: "block",
-  },
-  neonTitle: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 44,
-    color: neonRed,
-    letterSpacing: 8,
-    animation: "neonPulse 3s ease-in-out infinite",
-    lineHeight: 1,
-  },
-  neonSubtitle: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 28,
-    color: amber,
-    letterSpacing: 5,
-    lineHeight: 1,
   },
 
   nowPlayingBar: {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    margin: "8px 12px 0",
-    background: "#000",
+    margin: "0 12px 10px",
+    background: "#111",
     border: `1px solid ${chrome}25`,
-    borderRadius: 6,
+    borderRadius: 4,
     padding: "6px 10px",
   },
   nowPlayingArt: {
@@ -629,15 +566,6 @@ const s = {
     background: neonRed,
     borderRadius: 1,
     transition: "width 1s linear",
-  },
-  headerBottom: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 11,
-    color: amber,
-    letterSpacing: 8,
-    textAlign: "center",
-    marginTop: 6,
-    opacity: 0.7,
   },
 
   // BILJETTER
@@ -704,16 +632,17 @@ const s = {
     animation: "fadeIn 0.3s ease",
   },
 
+  // SÖK — CREAM
   searchSection: { padding: "12px 12px 6px" },
   searchBox: {
     display: "flex",
     alignItems: "center",
-    background: "#111",
-    border: `1px solid ${chrome}30`,
+    background: cream,
+    border: `1px solid ${chrome}60`,
     borderRadius: 4,
     padding: "0 14px",
   },
-  searchIcon: { fontSize: 16, marginRight: 8, color: chrome, opacity: 0.5 },
+  searchIcon: { fontSize: 16, marginRight: 8, color: "#888", opacity: 0.7 },
   searchInput: {
     flex: 1,
     border: "none",
@@ -721,19 +650,19 @@ const s = {
     padding: "11px 0",
     fontSize: 14,
     fontFamily: "'Lato', sans-serif",
-    color: cream,
+    color: "#1a0a00",
     background: "transparent",
   },
   clearBtn: {
     background: "none",
     border: "none",
     cursor: "pointer",
-    color: "#555",
+    color: "#888",
     fontSize: 14,
     padding: "4px",
   },
 
-  // LÅTLISTA — CREAM BAKGRUND
+  // LÅTLISTA
   trackList: {
     padding: "6px 12px",
     display: "flex",
@@ -847,13 +776,6 @@ const s = {
     gap: 12,
     animation: "slideUp 0.3s ease",
   },
-  modalDeco: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 11,
-    color: chrome,
-    letterSpacing: 6,
-    opacity: 0.6,
-  },
   modalHeader: {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: 28,
@@ -896,14 +818,6 @@ const s = {
     letterSpacing: 2,
     lineHeight: 1,
   },
-  modalBottom: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 11,
-    color: amber,
-    letterSpacing: 8,
-    opacity: 0.6,
-    marginTop: 4,
-  },
 
   btnNeon: {
     fontFamily: "'Bebas Neue', sans-serif",
@@ -915,7 +829,7 @@ const s = {
     borderRadius: 4,
     padding: "14px 32px",
     cursor: "pointer",
-    boxShadow: `0 0 16px ${neonRed}50`,
+    boxShadow: `0 0 16px ${neonRed}40`,
   },
   btnGhost: {
     fontFamily: "'Lato', sans-serif",
