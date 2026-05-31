@@ -117,6 +117,7 @@ export default function Jukebox() {
   const [guestQueue, setGuestQueue] = useState([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState([]);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [addingTrack, setAddingTrack] = useState(null);
   const lastSongId = useRef(null);
 
   const guestQueueCount = guestQueue.length;
@@ -178,6 +179,7 @@ export default function Jukebox() {
   };
 
   const handleSelectSong = async (track) => {
+    if (addingTrack) return;
     if (!queueOpen) { notify("Kön är stängd för ikväll.", "error"); return; }
     if (queueFull) { setSelected(track); setPaymentStep("full"); return; }
 
@@ -196,6 +198,8 @@ export default function Jukebox() {
     }
 
     setSelected(track);
+    setAddingTrack(track.id);
+
     if (testMode) {
       try {
         await apiAddToQueue(track.uri, track.id, track.name, artistName, track.duration_ms);
@@ -208,6 +212,8 @@ export default function Jukebox() {
         } else {
           notify("Kunde inte lägga till låten. Är Spotify igång?", "error");
         }
+      } finally {
+        setAddingTrack(null);
       }
     } else {
       try {
@@ -216,6 +222,8 @@ export default function Jukebox() {
         setPaymentStep("pay");
       } catch {
         notify("Betalning kunde inte startas. Försök igen.", "error");
+      } finally {
+        setAddingTrack(null);
       }
     }
   };
@@ -318,7 +326,12 @@ export default function Jukebox() {
           {filtered.map((track, i) => (
             <div
               key={track.id}
-              style={{ ...s.trackRow, opacity: queueFull ? 0.5 : 1, cursor: "pointer", animationDelay: `${i * 0.03}s` }}
+              style={{
+                ...s.trackRow,
+                opacity: queueFull || addingTrack ? 0.5 : 1,
+                cursor: addingTrack ? "wait" : "pointer",
+                animationDelay: `${i * 0.03}s`
+              }}
               className="track-row"
               onClick={() => handleSelectSong(track)}
             >
@@ -329,7 +342,9 @@ export default function Jukebox() {
               </div>
               <div style={s.trackRight}>
                 <div style={s.trackDuration}>{msToMin(track.duration_ms)}</div>
-                <div style={s.trackCoin}>{testMode ? "GRATIS" : `${CONFIG.PRICE_PER_SONG}kr`}</div>
+                <div style={s.trackCoin}>
+                  {addingTrack === track.id ? "⏳" : testMode ? "GRATIS" : `${CONFIG.PRICE_PER_SONG}kr`}
+                </div>
               </div>
             </div>
           ))}
@@ -359,12 +374,12 @@ export default function Jukebox() {
                 </p>
               ) : (
                 <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.6 }}>
-                  Välj en låt från listan och lägg till den i jukebox! Då spelas den strax i högtalarna!
+                  Välj en låt från listan och lägg till den i jukebox!
                   {!testMode && <><br /><strong style={{ color: red }}>Kostar {CONFIG.PRICE_PER_SONG} kr per låt.</strong></>}
                 </p>
               )}
               <button style={s.modalPrimary} onClick={() => setShowWelcome(false)}>
-                {queueOpen ? "Välj en låt! 🎵" : "Se spellistan"}
+                {queueOpen ? "Välj låt! 🎵" : "Se spellistan"}
               </button>
             </div>
           </div>
