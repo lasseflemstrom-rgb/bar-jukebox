@@ -25,10 +25,10 @@ export default function Admin() {
   const [pin, setPin] = useState("");
   const [loggedIn, setLoggedIn] = useState(false);
   const [pinError, setPinError] = useState(false);
-  const [activeTab, setActiveTab] = useState("live"); // "live" | "playlist"
+  const [activeTab, setActiveTab] = useState("live");
 
-  // Live-fliken
-  const [queue, setQueue] = useState([]);
+  const [spotifyQueue, setSpotifyQueue] = useState([]);
+  const [guestQueue, setGuestQueue] = useState([]);
   const [queueOpen, setQueueOpen] = useState(true);
   const [nowPlaying, setNowPlaying] = useState(null);
   const [progressMs, setProgressMs] = useState(0);
@@ -36,7 +36,6 @@ export default function Admin() {
   const [log, setLog] = useState([]);
   const lastSongId = useRef(null);
 
-  // Spellistfliken
   const [playlist, setPlaylist] = useState([]);
   const [playlistLoading, setPlaylistLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,12 +52,11 @@ export default function Admin() {
     setTimeout(() => setPlaylistMsg(null), 3000);
   };
 
-  // Poll live-data
   useEffect(() => {
     if (!loggedIn) return;
     const poll = async () => {
       try {
-        const { playing, queue: spotifyQueue, queueOpen: isOpen } = await adminGet("status");
+        const { playing, queue: sq, queueOpen: isOpen, guestQueue: gq } = await adminGet("status");
         if (playing?.item) {
           setNowPlaying(playing.item);
           setIsPlaying(playing.is_playing);
@@ -68,7 +66,8 @@ export default function Admin() {
             addLog(`Spelar nu: ${playing.item.name}`);
           }
         }
-        setQueue(spotifyQueue.slice(0, 5));
+        setSpotifyQueue((sq || []).slice(0, 5));
+        setGuestQueue(gq || []);
         setQueueOpen(isOpen);
       } catch {}
     };
@@ -77,7 +76,6 @@ export default function Admin() {
     return () => clearInterval(id);
   }, [loggedIn]);
 
-  // Smooth progress
   useEffect(() => {
     if (!nowPlaying) return;
     const id = setInterval(() => {
@@ -86,7 +84,6 @@ export default function Admin() {
     return () => clearInterval(id);
   }, [nowPlaying?.id]);
 
-  // Ladda spellista när fliken öppnas
   useEffect(() => {
     if (activeTab !== "playlist" || playlist.length > 0) return;
     setPlaylistLoading(true);
@@ -95,7 +92,6 @@ export default function Admin() {
       .catch(() => setPlaylistLoading(false));
   }, [activeTab]);
 
-  // Sök med debounce
   useEffect(() => {
     if (!searchQuery.trim()) { setSearchResults([]); return; }
     const timer = setTimeout(async () => {
@@ -197,7 +193,6 @@ export default function Admin() {
         </div>
       </header>
 
-      {/* Flikar */}
       <div style={s.tabs}>
         <button style={{ ...s.tab, ...(activeTab === "live" ? s.tabActive : {}) }} onClick={() => setActiveTab("live")}>
           🎵 Live
@@ -207,9 +202,10 @@ export default function Admin() {
         </button>
       </div>
 
-      {/* LIVE-FLIKEN */}
       {activeTab === "live" && (
         <div style={s.grid}>
+
+          {/* Spelar nu */}
           <div style={s.card}>
             <div style={s.cardTitle}>SPELAR NU</div>
             {nowPlaying ? (
@@ -244,12 +240,31 @@ export default function Admin() {
             )}
           </div>
 
+          {/* Gästbeställningar */}
           <div style={s.card}>
-            <div style={s.cardTitle}>KÖ ({queue.length} låtar)</div>
-            {queue.length === 0 ? (
+            <div style={s.cardTitle}>GÄSTBESTÄLLNINGAR ({guestQueue.length})</div>
+            {guestQueue.length === 0 ? (
+              <div style={s.empty}>Inga gästbeställningar</div>
+            ) : (
+              guestQueue.map((track, i) => (
+                <div key={track.id} style={s.queueRow}>
+                  <div style={s.queueNum}>{i + 1}</div>
+                  <div style={s.queueInfo}>
+                    <div style={s.queueName}>{track.track_name}</div>
+                    <div style={s.queueArtist}>{track.artist_name}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Spelas härnäst */}
+          <div style={s.card}>
+            <div style={s.cardTitle}>SPELAS HÄRNÄST ({spotifyQueue.length})</div>
+            {spotifyQueue.length === 0 ? (
               <div style={s.empty}>Kön är tom</div>
             ) : (
-              queue.map((track, i) => (
+              spotifyQueue.map((track, i) => (
                 <div key={track.id} style={s.queueRow}>
                   <div style={s.queueNum}>{i + 1}</div>
                   <img src={track.album?.images?.[2]?.url} style={s.queueArt} alt="" />
@@ -263,6 +278,7 @@ export default function Admin() {
             )}
           </div>
 
+          {/* Logg */}
           <div style={s.card}>
             <div style={s.cardTitle}>AKTIVITETSLOGG</div>
             {log.length === 0 ? (
@@ -273,10 +289,10 @@ export default function Admin() {
               ))
             )}
           </div>
+
         </div>
       )}
 
-      {/* SPELLISTFLIKEN */}
       {activeTab === "playlist" && (
         <div style={s.playlistWrap}>
           {playlistMsg && (
@@ -285,7 +301,6 @@ export default function Admin() {
             </div>
           )}
 
-          {/* Sök och lägg till */}
           <div style={s.card}>
             <div style={s.cardTitle}>LÄGG TILL LÅT</div>
             <input
@@ -314,7 +329,6 @@ export default function Admin() {
             ))}
           </div>
 
-          {/* Nuvarande spellista */}
           <div style={s.card}>
             <div style={s.cardTitle}>SPELLISTA ({playlist.length} låtar)</div>
             {playlistLoading ? (

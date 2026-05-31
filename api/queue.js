@@ -5,15 +5,24 @@ const sql = neon(process.env.DATABASE_URL);
 
 async function initDb() {
   await sql`CREATE TABLE IF NOT EXISTS recently_played (track_id TEXT PRIMARY KEY, track_name TEXT, played_at BIGINT NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS guest_queue (id SERIAL PRIMARY KEY, track_id TEXT NOT NULL, track_name TEXT, artist_name TEXT, duration_ms INTEGER, added_at BIGINT NOT NULL)`;
 }
 
 export default async function handler(req, res) {
   await initDb();
 
   if (req.method === "POST") {
-    const { uri, trackId, trackName } = req.body;
+    const { uri, trackId, trackName, artistName, durationMs } = req.body;
     try {
       const token = await getToken();
+
+      // Kolla kölängd
+      const count = await sql`SELECT COUNT(*) FROM guest_queue WHERE added_at > ${Date.now() - 60 * 60 * 1000}`;
+      if (parseInt(count[0].count) >= 3) {
+        return res.status(400).json({ error: "Kön är full" });
+      }
+
+      // Lägg till i Spotify
       const spotifyRes = await fetch("https://api.spotify.com/v1/me/player/queue?uri=" + encodeURIComponent(uri), {
         method: "POST",
         headers: { Authorization: "Bearer " + token },
@@ -22,13 +31,15 @@ export default async function handler(req, res) {
         const text = await spotifyRes.text();
         return res.status(500).json({ error: "Spotify: " + spotifyRes.status + " " + text });
       }
+
+      // Lägg till i guest_queue
+      await sql`INSERT INTO guest_queue (track_id, track_name, artist_name, duration_ms, added_at) VALUES (${trackId}, ${trackName || ""}, ${artistName || ""}, ${durationMs || 0}, ${Date.now()})`;
+
+      // Spara i recently_played
       if (trackId) {
-        await sql`
-          INSERT INTO recently_played (track_id, track_name, played_at)
-          VALUES (${trackId}, ${trackName || ""}, ${Date.now()})
-          ON CONFLICT (track_id) DO UPDATE SET played_at = ${Date.now()}
-        `;
+        await sql`INSERT INTO recently_played (track_id, track_name, played_at) VALUES (${trackId}, ${trackName || ""}, ${Date.now()}) ON CONFLICT (track_id) DO UPDATE SET played_at = ${Date.now()}`;
       }
+
       return res.json({ success: true });
     } catch (err) {
       return res.status(500).json({ error: err.message });
@@ -56,6 +67,12 @@ export default async function handler(req, res) {
         const rows = await sql`SELECT track_id FROM recently_played ORDER BY played_at DESC LIMIT 8`;
         return res.json(rows.map(r => r.track_id));
 
+      } else if (type === "guestqueue") {
+        // Rensa gamla låtar (>60 min)
+        await sql`DELETE FROM guest_queue WHERE added_at < ${Date.now() - 60 * 60 * 1000}`;
+        const rows = await sql`SELECT * FROM guest_queue ORDER BY added_at ASC`;
+        return res.json(rows);
+
       } else if (type === "playing") {
         const r = await fetch("https://api.spotify.com/v1/me/player/currently-playing", {
           headers: { Authorization: "Bearer " + token },
@@ -63,25 +80,34 @@ export default async function handler(req, res) {
         if (r.status === 204) return res.json(null);
         return res.json(await r.json());
 
-      } else if (type === "queue") {
-        const r = await fetch("https://api.spotify.com/v1/me/player/queue", {
-          headers: { Authorization: "Bearer " + token },
-        });
-        return res.json(await r.json());
-
       } else if (type === "status") {
-        const [playingRes, recent, settings] = await Promise.all([
+        // Rensa gamla låtar (>60 min)
+        await sql`DELETE FROM guest_queue WHERE added_at < ${Date.now() - 60 * 60 * 1000}`;
+
+        const [playingRes, recent, settings, guestQueue] = await Promise.all([
           fetch("https://api.spotify.com/v1/me/player/currently-playing", {
             headers: { Authorization: "Bearer " + token },
           }),
           sql`SELECT track_id FROM recently_played ORDER BY played_at DESC LIMIT 8`,
           sql`SELECT value FROM settings WHERE key = 'queue_open'`.catch(() => []),
+          sql`SELECT * FROM guest_queue ORDER BY added_at ASC`,
         ]);
+
         const playing = playingRes.status === 204 ? null : await playingRes.json();
+
+        // Ta bort från guest_queue om låten spelas nu
+        if (playing?.item) {
+          await sql`DELETE FROM guest_queue WHERE track_id = ${playing.item.id}`;
+        }
+
+        const updatedQueue = await sql`SELECT * FROM guest_queue ORDER BY added_at ASC`;
+
         return res.json({
           playing,
           recentlyPlayed: recent.map(r => r.track_id),
           queueOpen: settings[0]?.value !== "false",
+          guestQueue: updatedQueue,
+          guestQueueCount: updatedQueue.length,
         });
       }
 

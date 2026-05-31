@@ -1,30 +1,23 @@
 
-  
+
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
-// ============================================================
-// KONFIGURATION
-// ============================================================
 const CONFIG = {
   STRIPE_PUBLISHABLE_KEY: "Ypk_test_51TazxlAiBeFbGSJSUmWzOombCWLtTwS1jf19caS6IgohzkL2DAzZpt9baz4U18bGt8mftZECI7Kg7xrccjnzPqtE00Gi7ZproV", // pk_test_...
-  PRICE_PER_SONG: 15, // SEK
+  PRICE_PER_SONG: 15,
   MAX_QUEUE_SIZE: 3,
   TEST_MODE: true,
 };
 
 const stripePromise = loadStripe(CONFIG.STRIPE_PUBLISHABLE_KEY);
 
-// ============================================================
-// API-ANROP TILL BACKEND
-// ============================================================
 async function apiGet(type) {
   const res = await fetch(`/api/queue?type=${type}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
-
 
 async function checkTrack(trackId) {
   const res = await fetch("/api/check-track", {
@@ -45,23 +38,25 @@ async function createPaymentIntent(amount, trackName, trackUri) {
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
-async function apiAddToQueue(uri, trackId, trackName) {
+
+async function apiAddToQueue(uri, trackId, trackName, artistName, durationMs) {
   const res = await fetch("/api/queue", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ uri, trackId, trackName }),
+    body: JSON.stringify({ uri, trackId, trackName, artistName, durationMs }),
   });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error || "API error");
+  }
   return res.json();
 }
+
 const msToMin = (ms) =>
   `${Math.floor(ms / 60000)}:${String(Math.floor((ms % 60000) / 1000)).padStart(2, "0")}`;
 
 const LOGO_SRC = "/Neon_Needle_logo.png";
 
-// ============================================================
-// BETALNINGSFORMULÄR
-// ============================================================
 function CheckoutForm({ track, onSuccess, onCancel }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -81,7 +76,7 @@ function CheckoutForm({ track, onSuccess, onCancel }) {
       setError(stripeError.message);
       setLoading(false);
     } else {
-      await apiAddToQueue(track.uri);
+      await apiAddToQueue(track.uri, track.id, track.name, track.artists.map(a => a.name).join(", "), track.duration_ms);
       onSuccess();
     }
   };
@@ -105,9 +100,6 @@ function CheckoutForm({ track, onSuccess, onCancel }) {
   );
 }
 
-// ============================================================
-// HUVUDAPP
-// ============================================================
 export default function Jukebox() {
   const [tracks, setTracks] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -122,48 +114,46 @@ export default function Jukebox() {
   const [notification, setNotification] = useState(null);
   const [testMode, setTestMode] = useState(CONFIG.TEST_MODE);
   const [backendError, setBackendError] = useState(null);
-  const [sessionQueueCount, setSessionQueueCount] = useState(0);
+  const [guestQueue, setGuestQueue] = useState([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState([]);
   const lastSongId = useRef(null);
 
-  const queueFull = sessionQueueCount >= CONFIG.MAX_QUEUE_SIZE;
+  const guestQueueCount = guestQueue.length;
+  const queueFull = guestQueueCount >= CONFIG.MAX_QUEUE_SIZE;
 
-  // Ladda spellista från backend
   useEffect(() => {
     apiGet("playlist")
       .then((data) => { setTracks(data); setFiltered(data); setLoading(false); })
       .catch((err) => { setBackendError(err.message); setLoading(false); });
   }, []);
 
-  // Polla nuvarande låt från backend
   useEffect(() => {
     const poll = async () => {
-  try {
-    const { playing, recentlyPlayed, queueOpen: isOpen } = await apiGet("status");
-    if (playing?.item) {
-      const newSongId = playing.item.id;
-      if (newSongId !== lastSongId.current) {
-        lastSongId.current = newSongId;
-        setProgressMs(playing.progress_ms || 0);
-        setSessionQueueCount(c => Math.max(0, c - 1));
-      } else {
-        setProgressMs((prev) => {
-          const drift = Math.abs(prev - (playing.progress_ms || 0));
-          return drift > 3000 ? playing.progress_ms : prev;
-        });
-      }
-      setNowPlaying(playing.item);
-    }
-    setQueueOpen(isOpen);
-    setRecentlyPlayed(recentlyPlayed || []);
-  } catch {}
-};
+      try {
+        const { playing, recentlyPlayed: rp, queueOpen: isOpen, guestQueue: gq } = await apiGet("status");
+        if (playing?.item) {
+          const newSongId = playing.item.id;
+          if (newSongId !== lastSongId.current) {
+            lastSongId.current = newSongId;
+            setProgressMs(playing.progress_ms || 0);
+          } else {
+            setProgressMs((prev) => {
+              const drift = Math.abs(prev - (playing.progress_ms || 0));
+              return drift > 3000 ? playing.progress_ms : prev;
+            });
+          }
+          setNowPlaying(playing.item);
+        }
+        setQueueOpen(isOpen);
+        setRecentlyPlayed(rp || []);
+        setGuestQueue(gq || []);
+      } catch {}
+    };
     poll();
     const id = setInterval(poll, 8000);
     return () => clearInterval(id);
   }, []);
 
-  // Smooth progress ticker
   useEffect(() => {
     if (!nowPlaying) return;
     const id = setInterval(() => {
@@ -172,7 +162,6 @@ export default function Jukebox() {
     return () => clearInterval(id);
   }, [nowPlaying?.id]);
 
-  // Sökfilter
   useEffect(() => {
     if (!search.trim()) { setFiltered(tracks); return; }
     const q = search.toLowerCase();
@@ -192,21 +181,32 @@ export default function Jukebox() {
     if (queueFull) { setSelected(track); setPaymentStep("full"); return; }
 
     const artistName = track.artists.map(a => a.name).join(", ");
+
     if (recentlyPlayed.includes(track.id)) {
-     setSelected(track);
-     setPaymentStep("recentlyPlayed");
-     return;
+      setSelected(track);
+      setPaymentStep("recentlyPlayed");
+      return;
+    }
+
+    if (guestQueue.some(t => t.track_id === track.id)) {
+      setSelected(track);
+      setPaymentStep("recentlyPlayed");
+      return;
     }
 
     setSelected(track);
     if (testMode) {
       try {
-        await apiAddToQueue(track.uri, track.id, track.duration_ms, track.name, artistName);
-        setSessionQueueCount(c => c + 1);
+        await apiAddToQueue(track.uri, track.id, track.name, artistName, track.duration_ms);
+        setGuestQueue(q => [...q, { track_id: track.id, track_name: track.name, artist_name: artistName }]);
         notify(`"${track.name}" är tillagd i jukebox!`);
         setPaymentStep("done");
-      } catch {
-        notify("Kunde inte lägga till låten. Är Spotify igång?", "error");
+      } catch (err) {
+        if (err.message === "Kön är full") {
+          setPaymentStep("full");
+        } else {
+          notify("Kunde inte lägga till låten. Är Spotify igång?", "error");
+        }
       }
     } else {
       try {
@@ -220,7 +220,6 @@ export default function Jukebox() {
   };
 
   const handlePaymentSuccess = () => {
-    setSessionQueueCount(c => c + 1);
     notify(`"${selected.name}" är tillagd i jukebox!`);
     setPaymentStep("done");
     setClientSecret(null);
@@ -228,9 +227,6 @@ export default function Jukebox() {
 
   const handleClose = () => { setSelected(null); setPaymentStep(null); setClientSecret(null); };
 
-  // ============================================================
-  // RENDER
-  // ============================================================
   return (
     <>
       <style>{globalStyles}</style>
@@ -290,6 +286,19 @@ export default function Jukebox() {
           </div>
         </div>
 
+        {guestQueueCount > 0 && (
+          <div style={s.guestQueueStrip}>
+            <div style={s.guestQueueTitle}>🎶 I KÖN</div>
+            {guestQueue.map((t, i) => (
+              <div key={t.track_id} style={s.guestQueueRow}>
+                <span style={s.guestQueueNum}>{i + 1}</span>
+                <span style={s.guestQueueName}>{t.track_name}</span>
+                <span style={s.guestQueueArtist}>{t.artist_name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {notification && (
           <div style={{ ...s.toast, background: notification.type === "error" ? "#7f1d1d" : "#14532d", borderColor: notification.type === "error" ? "#ef4444" : "#22c55e" }}>
             {notification.msg}
@@ -345,22 +354,16 @@ export default function Jukebox() {
           </div>
         </footer>
 
-        {/* Betalningsmodal med Stripe */}
         {selected && paymentStep === "pay" && clientSecret && (
           <div style={s.overlay} onClick={handleClose}>
             <div style={s.modal} onClick={e => e.stopPropagation()}>
               <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: "stripe" } }}>
-                <CheckoutForm
-                  track={selected}
-                  onSuccess={handlePaymentSuccess}
-                  onCancel={handleClose}
-                />
+                <CheckoutForm track={selected} onSuccess={handlePaymentSuccess} onCancel={handleClose} />
               </Elements>
             </div>
           </div>
         )}
 
-        {/* Låten spelades nyligen */}
         {paymentStep === "recentlyPlayed" && (
           <div style={s.overlay} onClick={handleClose}>
             <div style={s.modal} onClick={e => e.stopPropagation()}>
@@ -375,7 +378,6 @@ export default function Jukebox() {
           </div>
         )}
 
-        {/* Kön full modal */}
         {paymentStep === "full" && (
           <div style={s.overlay} onClick={handleClose}>
             <div style={s.modal} onClick={e => e.stopPropagation()}>
@@ -389,16 +391,13 @@ export default function Jukebox() {
           </div>
         )}
 
-        {/* Bekräftelse */}
         {paymentStep === "done" && (
           <div style={s.overlay} onClick={handleClose}>
             <div style={s.modal} onClick={e => e.stopPropagation()}>
               <div style={s.modalHeader}>Din låt är tillagd!</div>
               <div style={s.modalTitle}>{selected?.name}</div>
               <div style={s.modalArtist}>{selected?.artists.map(a => a.name).join(", ")}</div>
-              <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.6 }}>
-                Den kommer att spelas strax!
-              </p>
+              <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.6 }}>Den kommer att spelas strax!</p>
               <p style={{ color: "#92400e", fontSize: 14, margin: 0 }}>Njut av musiken!</p>
               <button style={s.modalPrimary} onClick={handleClose}>Stäng</button>
             </div>
@@ -409,9 +408,6 @@ export default function Jukebox() {
   );
 }
 
-// ============================================================
-// SPOTIFY SVG
-// ============================================================
 function SpotifyLogoWhiteSmall() {
   return (
     <svg height="16" viewBox="0 0 102 31" fill="white" style={{ display: "inline-block", verticalAlign: "middle", marginLeft: 6 }}>
@@ -421,9 +417,6 @@ function SpotifyLogoWhiteSmall() {
   );
 }
 
-// ============================================================
-// GLOBALA STILAR
-// ============================================================
 const globalStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Bebas+Neue&family=Lato:wght@400;700&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -465,6 +458,12 @@ const s = {
   queueStrip: { background: warmBlack, borderBottom: `2px solid ${chrome}30`, position: "relative", zIndex: 5 },
   queueStripInner: { padding: "8px 16px", fontSize: 15, color: cream, opacity: 0.85, display: "flex", justifyContent: "space-between", alignItems: "center" },
   queuePrice: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: amber, letterSpacing: 1 },
+  guestQueueStrip: { background: "#2a0a00", borderBottom: `1px solid ${chrome}20`, padding: "10px 16px", zIndex: 4 },
+  guestQueueTitle: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 13, color: amber, letterSpacing: 3, marginBottom: 6 },
+  guestQueueRow: { display: "flex", alignItems: "center", gap: 8, padding: "3px 0" },
+  guestQueueNum: { fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: red, width: 16 },
+  guestQueueName: { fontSize: 13, fontWeight: 700, color: cream, flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  guestQueueArtist: { fontSize: 11, color: chrome, opacity: 0.7, whiteSpace: "nowrap" },
   toast: { position: "fixed", top: 80, left: "50%", transform: "translateX(-50%)", zIndex: 100, padding: "12px 20px", borderRadius: 8, border: "1px solid", color: "#fff", fontSize: 13, fontWeight: 700, boxShadow: "0 4px 20px rgba(0,0,0,0.4)", whiteSpace: "nowrap", animation: "fadeIn 0.3s ease" },
   searchSection: { padding: "16px 16px 8px", position: "relative", zIndex: 1 },
   searchBox: { display: "flex", alignItems: "center", background: "#fff", border: `2px solid ${chrome}`, borderRadius: 50, padding: "0 16px", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.06)" },
@@ -494,6 +493,3 @@ const s = {
   modalPrimary: { background: red, color: "#fff", border: "none", borderRadius: 50, padding: "14px 32px", fontSize: 15, fontWeight: 700, fontFamily: "'Lato', sans-serif", cursor: "pointer", letterSpacing: 0.5, boxShadow: `0 4px 20px ${red}60` },
   modalGhost: { background: "transparent", color: "#999", border: `1px solid ${chrome}`, borderRadius: 50, padding: "10px 24px", fontSize: 13, fontFamily: "'Lato', sans-serif", cursor: "pointer" },
 };
-
-  
-  
