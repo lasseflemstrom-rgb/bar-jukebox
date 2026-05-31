@@ -509,27 +509,29 @@ const s = {
 
   // FLIKAR
   tabs: {
-    display: "flex",
-    borderBottom: `1px solid ${chrome}20`,
-    background: "#0d0b07",
-  },
-  tab: {
-    padding: "12px 24px",
-    background: "none",
-    border: "none",
-    color: "#666",
-    fontSize: 14,
-    fontWeight: 700,
-    cursor: "pointer",
-    fontFamily: "'Lato', sans-serif",
-    letterSpacing: 0.5,
-    borderBottom: "3px solid transparent",
-    transition: "all 0.15s ease",
-  },
-  tabActive: {
-    color: cream,
-    borderBottom: `3px solid #e81a1a`,
-  },
+  display: "flex",
+  borderBottom: `1px solid ${chrome}20`,
+  background: "#0d0b07",
+},
+tab: {
+  flex: 1,
+  padding: "14px 0",
+  background: "none",
+  border: "none",
+  borderBottom: "3px solid transparent",
+  color: "#666",
+  fontSize: 15,
+  fontWeight: 700,
+  cursor: "pointer",
+  fontFamily: "'Lato', sans-serif",
+  letterSpacing: 0.5,
+  textAlign: "center",
+  transition: "all 0.15s ease",
+},
+tabActive: {
+  color: cream,
+  borderBottom: `3px solid #e81a1a`,
+},
 
   // GRID
   grid: {
