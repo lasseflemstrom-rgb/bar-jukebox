@@ -359,12 +359,12 @@ export default function Jukebox() {
                 </p>
               ) : (
                 <p style={{ color: "#666", fontSize: 15, margin: 0, lineHeight: 1.6 }}>
-                  Välj en låt från listan och lägg till den i jukebox!
+                  Välj en låt från listan och lägg till den i jukebox! Då spelas den strax i högtalarna!
                   {!testMode && <><br /><strong style={{ color: red }}>Kostar {CONFIG.PRICE_PER_SONG} kr per låt.</strong></>}
                 </p>
               )}
               <button style={s.modalPrimary} onClick={() => setShowWelcome(false)}>
-                {queueOpen ? "Välj låt! 🎵" : "Se spellistan"}
+                {queueOpen ? "Välj en låt! 🎵" : "Se spellistan"}
               </button>
             </div>
           </div>
