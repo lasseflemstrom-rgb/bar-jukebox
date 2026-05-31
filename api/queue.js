@@ -97,8 +97,9 @@ export default async function handler(req, res) {
         const playing = playingRes.status === 204 ? null : await playingRes.json();
 
         // Ta bort från guest_queue om låten spelas nu
+        // Ta bort från guest_queue om låten spelas nu
         if (playing?.item) {
-          await sql`DELETE FROM guest_queue WHERE track_id = ${playing.item.id}`;
+         await sql`DELETE FROM guest_queue WHERE track_id = ${playing.item.id}`;
         }
 
         const updatedQueue = await sql`SELECT * FROM guest_queue ORDER BY added_at ASC`;
