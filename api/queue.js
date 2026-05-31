@@ -6,6 +6,7 @@ const sql = neon(process.env.DATABASE_URL);
 async function initDb() {
   await sql`CREATE TABLE IF NOT EXISTS recently_played (track_id TEXT PRIMARY KEY, track_name TEXT, played_at BIGINT NOT NULL)`;
   await sql`CREATE TABLE IF NOT EXISTS guest_queue (id SERIAL PRIMARY KEY, track_id TEXT NOT NULL, track_name TEXT, artist_name TEXT, duration_ms INTEGER, added_at BIGINT NOT NULL)`;
+  await sql`ALTER TABLE guest_queue ADD CONSTRAINT unique_track UNIQUE (track_id)`.catch(() => {});
 }
 
 export default async function handler(req, res) {
@@ -16,8 +17,11 @@ export default async function handler(req, res) {
     try {
       const token = await getToken();
 
+      // Rensa gamla poster
+      await sql`DELETE FROM guest_queue WHERE added_at < ${Date.now() - 30 * 60 * 1000}`;
+
       // Kolla kölängd
-      const count = await sql`SELECT COUNT(*) FROM guest_queue WHERE added_at > ${Date.now() - 60 * 60 * 1000}`;
+      const count = await sql`SELECT COUNT(*) FROM guest_queue`;
       if (parseInt(count[0].count) >= 3) {
         return res.status(400).json({ error: "Kön är full" });
       }
@@ -32,8 +36,12 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: "Spotify: " + spotifyRes.status + " " + text });
       }
 
-      // Lägg till i guest_queue
-      await sql`INSERT INTO guest_queue (track_id, track_name, artist_name, duration_ms, added_at) VALUES (${trackId}, ${trackName || ""}, ${artistName || ""}, ${durationMs || 0}, ${Date.now()})`;
+      // Lägg till i guest_queue med unik constraint
+      try {
+        await sql`INSERT INTO guest_queue (track_id, track_name, artist_name, duration_ms, added_at) VALUES (${trackId}, ${trackName || ""}, ${artistName || ""}, ${durationMs || 0}, ${Date.now()})`;
+      } catch {
+        return res.status(400).json({ error: "Låten finns redan i kön" });
+      }
 
       // Spara i recently_played
       if (trackId) {
@@ -69,7 +77,7 @@ export default async function handler(req, res) {
         return res.json(rows.map(r => r.track_id));
 
       } else if (type === "guestqueue") {
-        await sql`DELETE FROM guest_queue WHERE added_at < ${Date.now() - 60 * 60 * 1000}`;
+        await sql`DELETE FROM guest_queue WHERE added_at < ${Date.now() - 30 * 60 * 1000}`;
         await sql`DELETE FROM recently_played WHERE played_at < ${Date.now() - 90 * 60 * 1000}`;
         const rows = await sql`SELECT * FROM guest_queue ORDER BY added_at ASC`;
         return res.json(rows);
@@ -83,7 +91,7 @@ export default async function handler(req, res) {
 
       } else if (type === "status") {
         // Rensa gamla poster
-        await sql`DELETE FROM guest_queue WHERE added_at < ${Date.now() - 60 * 60 * 1000}`;
+        await sql`DELETE FROM guest_queue WHERE added_at < ${Date.now() - 30 * 60 * 1000}`;
         await sql`DELETE FROM recently_played WHERE played_at < ${Date.now() - 90 * 60 * 1000}`;
 
         const [playingRes, recent, settings] = await Promise.all([
@@ -96,10 +104,10 @@ export default async function handler(req, res) {
 
         const playing = playingRes.status === 204 ? null : await playingRes.json();
 
-        // Ta bort från guest_queue om låten spelas nu
-        // Ta bort från guest_queue om låten spelas nu
+        // Ta bort från guest_queue och spara i recently_played om låten spelas nu
         if (playing?.item) {
-         await sql`DELETE FROM guest_queue WHERE track_id = ${playing.item.id}`;
+          await sql`DELETE FROM guest_queue WHERE track_id = ${playing.item.id}`;
+          await sql`INSERT INTO recently_played (track_id, track_name, played_at) VALUES (${playing.item.id}, ${playing.item.name}, ${Date.now()}) ON CONFLICT (track_id) DO UPDATE SET played_at = ${Date.now()}`;
         }
 
         const updatedQueue = await sql`SELECT * FROM guest_queue ORDER BY added_at ASC`;
