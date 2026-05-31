@@ -1,5 +1,6 @@
 
   
+  
 import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -240,21 +241,24 @@ export default function Jukebox() {
 
         {/* HEADER */}
         <header style={s.header}>
-          <div style={s.headerTop}>
-            <div style={s.headerDeco}>— 1 0 1 5 —</div>
-          </div>
-          <div style={s.headerLogoWrap}>
-            <img
-              src={LOGO_SRC}
-              alt="Musikmaskinen Jukebox"
-              style={s.headerLogo}
-              onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
-            />
-            <div style={{ display: "none", flexDirection: "column", alignItems: "center" }}>
-              <div style={s.neonTitle}>MUSIK</div>
-              <div style={s.neonSubtitle}>MASKINEN</div>
+          <div style={s.headerDeco}>— 1 0 1 5 —</div>
+
+          {/* KROM-RAM RUNT LOGON */}
+          <div style={s.logoFrame}>
+            <div style={s.logoFrameInner}>
+              <img
+                src={LOGO_SRC}
+                alt="Musikmaskinen Jukebox"
+                style={s.headerLogo}
+                onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+              />
+              <div style={{ display: "none", flexDirection: "column", alignItems: "center", padding: "8px 0" }}>
+                <div style={s.neonTitle}>MUSIK</div>
+                <div style={s.neonSubtitle}>MASKINEN</div>
+              </div>
             </div>
           </div>
+
           {nowPlaying && (
             <div style={s.nowPlayingBar}>
               <img src={nowPlaying.album?.images?.[2]?.url} style={s.nowPlayingArt} alt="" />
@@ -268,6 +272,7 @@ export default function Jukebox() {
               </div>
             </div>
           )}
+
           <div style={s.headerBottom}>— JUKEBOX —</div>
         </header>
 
@@ -289,7 +294,7 @@ export default function Jukebox() {
 
         {/* NOTIS */}
         {notification && (
-          <div style={{ ...s.toast, background: notification.type === "error" ? "#3d0000" : "#003d1a", borderColor: notification.type === "error" ? neonRed : "#00ff88" }}>
+          <div style={{ ...s.toast, background: notification.type === "error" ? "#3d0000" : "#003d1a", borderColor: notification.type === "error" ? neonRed : "#00cc66" }}>
             {notification.msg}
           </div>
         )}
@@ -330,12 +335,11 @@ export default function Jukebox() {
                   opacity: (queueFull && !inQueue) || addingTrack ? 0.5 : 1,
                   cursor: addingTrack ? "wait" : "pointer",
                   animationDelay: `${i * 0.02}s`,
-                  borderColor: inQueue ? amber : `${chrome}40`,
+                  borderColor: inQueue ? amber : `${chrome}30`,
                 }}
                 className="track-row"
                 onClick={() => handleSelectSong(track)}
               >
-                <div style={s.trackNum}>{String(i + 1).padStart(2, "0")}</div>
                 <img src={track.album?.images?.[2]?.url || track.album?.images?.[0]?.url} style={s.trackArt} alt="" />
                 <div style={s.trackInfo}>
                   <div style={s.trackName}>{track.name}</div>
@@ -345,7 +349,8 @@ export default function Jukebox() {
                   <div style={s.trackDuration}>{msToMin(track.duration_ms)}</div>
                   <div style={{
                     ...s.trackBtn,
-                    background: inQueue ? amber : isAdding ? "#444" : neonRed,
+                    background: inQueue ? amber : isAdding ? "#888" : neonRed,
+                    color: inQueue ? "#000" : "#fff",
                   }}>
                     {isAdding ? "⏳" : inQueue ? "✓" : testMode ? "GRATIS" : `${CONFIG.PRICE_PER_SONG}kr`}
                   </div>
@@ -451,7 +456,7 @@ export default function Jukebox() {
 
 function SpotifyLogo() {
   return (
-    <svg height="16" viewBox="0 0 102 31" fill="white" style={{ display: "inline-block", verticalAlign: "middle", marginLeft: 6, opacity: 0.6 }}>
+    <svg height="16" viewBox="0 0 102 31" fill="white" style={{ display: "inline-block", verticalAlign: "middle", marginLeft: 6, opacity: 0.5 }}>
       <path d="M15.5 0C6.9 0 0 6.9 0 15.5S6.9 31 15.5 31 31 24.1 31 15.5 24.1 0 15.5 0zm7.1 22.3c-.3.4-.8.6-1.3.3-3.5-2.1-7.9-2.6-13.1-1.4-.5.1-1-.2-1.1-.7-.1-.5.2-1 .7-1.1 5.7-1.3 10.5-.7 14.5 1.6.4.3.5.8.3 1.3zm1.9-4.2c-.4.5-1.1.7-1.6.3-4-2.4-10.1-3.1-14.8-1.7-.6.2-1.3-.2-1.4-.8-.2-.6.2-1.3.8-1.4 5.4-1.6 12.1-.8 16.7 1.9.5.4.7 1.1.3 1.7zm.2-4.4C20.5 11 13 10.7 8.5 12c-.7.2-1.5-.2-1.7-.9-.2-.7.2-1.5.9-1.7C13 7.9 21.2 8.2 26.4 11.2c.6.4.8 1.2.5 1.8-.4.7-1.2.9-1.8.7z"/>
       <path d="M42.6 8.5h-3.2v14h3.2V8.5zm15.5 0v8.5L50.4 8.5h-3v14h3.2v-8.7l8 8.7h2.8V8.5h-3.3zm12.5 11.3c-2.3 0-4-1.8-4-4.3s1.7-4.3 4-4.3c1.4 0 2.6.7 3.3 1.7l2.4-1.7c-1.2-1.7-3.2-2.8-5.7-2.8-4 0-7.2 3.2-7.2 7.1s3.2 7.1 7.2 7.1c2.5 0 4.5-1.1 5.7-2.8l-2.4-1.7c-.7 1-1.9 1.7-3.3 1.7zm18.2-11.3h-10v14h10v-2.8h-6.8v-3h6.4v-2.7h-6.4v-2.7h6.8V8.5zm7.5 5.7c-2-.5-2.7-.7-2.7-1.5 0-.7.6-1.1 1.7-1.1 1.1 0 2.1.5 3.1 1.4l1.9-2.1c-1.2-1.2-2.8-2-5-2-3 0-5 1.6-5 4 0 2.7 1.8 3.4 4.4 4.1 2 .5 2.7.8 2.7 1.6 0 .8-.7 1.2-1.9 1.2-1.4 0-2.7-.6-3.7-1.7l-2 2.1c1.3 1.5 3.2 2.3 5.6 2.3 3.2 0 5.2-1.6 5.2-4.1.1-2.7-1.6-3.5-4.3-4.2z"/>
     </svg>
@@ -461,26 +466,24 @@ function SpotifyLogo() {
 const globalStyles = `
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Playfair+Display:wght@700&family=Lato:wght@400;700&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #0a0a0a; font-family: 'Lato', sans-serif; overflow-x: hidden; touch-action: pan-y; }
-  
+  html, body { background: #0f0f0f; font-family: 'Lato', sans-serif; overflow-x: hidden; touch-action: pan-y; }
   .track-row { transition: all 0.15s ease; }
   .track-row:active { transform: scale(0.98); }
-
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes neonPulse { 0%, 100% { text-shadow: 0 0 10px #ff2222, 0 0 20px #ff2222, 0 0 40px #ff2222; } 50% { text-shadow: 0 0 5px #ff2222, 0 0 10px #ff2222; } }
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
+  input::placeholder { color: #666; }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: #111; }
   ::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
 `;
 
-const neonRed = "#ff2222";
-const amber = "#e8a020";
-const chrome = "#c8b878";
-const darkBg = "#0f0f0f";
-const cardBg = "#1a1510";
+const neonRed = "#e81a1a";
+const amber = "#d4920a";
+const chrome = "#c8b470";
 const cream = "#f0e8cc";
+const darkBg = "#0f0f0f";
+const warmBlack = "#1a0a00";
 
 const s = {
   app: {
@@ -493,7 +496,7 @@ const s = {
   },
 
   testRibbon: {
-    background: "#3d2000",
+    background: "#2a1400",
     color: amber,
     fontSize: 11,
     fontWeight: 700,
@@ -503,7 +506,6 @@ const s = {
     justifyContent: "center",
     alignItems: "center",
     gap: 12,
-    zIndex: 10,
     borderBottom: `1px solid ${amber}40`,
   },
   testBtn: {
@@ -519,29 +521,40 @@ const s = {
 
   // HEADER
   header: {
-    background: "linear-gradient(180deg, #1a0a00 0%, #0f0f0f 100%)",
+    background: `linear-gradient(180deg, #1a0800 0%, #0f0f0f 100%)`,
     borderBottom: `3px solid ${chrome}`,
     position: "sticky",
     top: 0,
     zIndex: 10,
-    boxShadow: `0 4px 30px rgba(0,0,0,0.8), 0 0 60px rgba(255,34,34,0.08)`,
+    boxShadow: "0 4px 30px rgba(0,0,0,0.8)",
     paddingBottom: 8,
-  },
-  headerTop: {
-    textAlign: "center",
-    paddingTop: 6,
   },
   headerDeco: {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: 11,
     color: chrome,
     letterSpacing: 6,
-    opacity: 0.7,
+    opacity: 0.6,
+    textAlign: "center",
+    paddingTop: 6,
   },
-  headerLogoWrap: {
+
+  // KROM-RAM
+  logoFrame: {
+    margin: "6px 16px 0",
+    background: `linear-gradient(145deg, #d4c070, #a08040, #d4c070, #806030, #d4c070)`,
+    borderRadius: 16,
+    padding: 3,
+    boxShadow: "0 2px 12px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,220,100,0.3)",
+  },
+  logoFrameInner: {
+    background: "#0a0a0a",
+    borderRadius: 13,
+    padding: "10px 16px",
     display: "flex",
     justifyContent: "center",
-    padding: "4px 16px 0",
+    alignItems: "center",
+    minHeight: 80,
   },
   headerLogo: {
     height: 64,
@@ -550,7 +563,7 @@ const s = {
   },
   neonTitle: {
     fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 48,
+    fontSize: 44,
     color: neonRed,
     letterSpacing: 8,
     animation: "neonPulse 3s ease-in-out infinite",
@@ -558,18 +571,19 @@ const s = {
   },
   neonSubtitle: {
     fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 32,
+    fontSize: 28,
     color: amber,
-    letterSpacing: 6,
+    letterSpacing: 5,
     lineHeight: 1,
   },
+
   nowPlayingBar: {
     display: "flex",
     alignItems: "center",
     gap: 10,
     margin: "8px 12px 0",
     background: "#000",
-    border: `1px solid ${chrome}30`,
+    border: `1px solid ${chrome}25`,
     borderRadius: 6,
     padding: "6px 10px",
   },
@@ -578,7 +592,7 @@ const s = {
     height: 36,
     borderRadius: 3,
     flexShrink: 0,
-    border: `1px solid ${chrome}40`,
+    border: `1px solid ${chrome}30`,
   },
   nowPlayingText: { minWidth: 0, flex: 1 },
   nowPlayingLabel: {
@@ -605,7 +619,7 @@ const s = {
   },
   progressBar: {
     height: 2,
-    background: "rgba(255,255,255,0.1)",
+    background: "rgba(255,255,255,0.08)",
     borderRadius: 1,
     marginTop: 4,
     overflow: "hidden",
@@ -623,33 +637,32 @@ const s = {
     letterSpacing: 8,
     textAlign: "center",
     marginTop: 6,
-    opacity: 0.8,
+    opacity: 0.7,
   },
 
-  // TICKETS
+  // BILJETTER
   ticketSection: {
     padding: "8px 12px",
     display: "flex",
     flexDirection: "column",
     gap: 4,
-    borderBottom: `1px solid ${chrome}20`,
+    borderBottom: `1px solid ${chrome}15`,
   },
   ticket: {
     display: "flex",
     alignItems: "center",
     gap: 10,
     background: "#1a1200",
-    border: `1px dashed ${amber}60`,
+    border: `1px dashed ${amber}50`,
     borderRadius: 4,
     padding: "6px 10px",
-    position: "relative",
   },
   ticketNum: {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: 22,
     color: amber,
     lineHeight: 1,
-    minWidth: 24,
+    minWidth: 20,
     textAlign: "center",
   },
   ticketInfo: { flex: 1, minWidth: 0 },
@@ -664,17 +677,16 @@ const s = {
   ticketArtist: {
     fontSize: 11,
     color: chrome,
-    opacity: 0.7,
+    opacity: 0.6,
   },
   ticketNote: {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: 10,
     color: amber,
     letterSpacing: 2,
-    opacity: 0.8,
+    opacity: 0.7,
   },
 
-  // TOAST
   toast: {
     position: "fixed",
     top: 80,
@@ -692,24 +704,16 @@ const s = {
     animation: "fadeIn 0.3s ease",
   },
 
-  // SÖK
-  searchSection: {
-    padding: "12px 12px 6px",
-  },
+  searchSection: { padding: "12px 12px 6px" },
   searchBox: {
     display: "flex",
     alignItems: "center",
     background: "#111",
-    border: `1px solid ${chrome}40`,
+    border: `1px solid ${chrome}30`,
     borderRadius: 4,
     padding: "0 14px",
   },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 8,
-    color: chrome,
-    opacity: 0.6,
-  },
+  searchIcon: { fontSize: 16, marginRight: 8, color: chrome, opacity: 0.5 },
   searchInput: {
     flex: 1,
     border: "none",
@@ -724,12 +728,12 @@ const s = {
     background: "none",
     border: "none",
     cursor: "pointer",
-    color: "#666",
+    color: "#555",
     fontSize: 14,
     padding: "4px",
   },
 
-  // LÅTLISTA
+  // LÅTLISTA — CREAM BAKGRUND
   trackList: {
     padding: "6px 12px",
     display: "flex",
@@ -747,41 +751,32 @@ const s = {
     alignItems: "center",
     gap: 10,
     padding: "8px 10px",
-    background: cardBg,
+    background: cream,
     border: `1px solid ${chrome}30`,
     borderRadius: 4,
     animation: "fadeIn 0.3s ease both",
     overflow: "hidden",
-  },
-  trackNum: {
-    fontFamily: "'Bebas Neue', sans-serif",
-    fontSize: 20,
-    color: `${chrome}60`,
-    minWidth: 26,
-    textAlign: "right",
-    lineHeight: 1,
   },
   trackArt: {
     width: 40,
     height: 40,
     borderRadius: 2,
     flexShrink: 0,
-    background: "#222",
-    border: `1px solid ${chrome}20`,
+    background: "#ddd",
+    border: `1px solid ${chrome}40`,
   },
   trackInfo: { flex: 1, minWidth: 0 },
   trackName: {
     fontSize: 14,
     fontWeight: 700,
-    color: cream,
+    color: "#1a0a00",
     whiteSpace: "nowrap",
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
   trackArtist: {
     fontSize: 11,
-    color: chrome,
-    opacity: 0.6,
+    color: "#5a3a10",
     marginTop: 2,
     whiteSpace: "nowrap",
     overflow: "hidden",
@@ -796,14 +791,13 @@ const s = {
   },
   trackDuration: {
     fontSize: 10,
-    color: "#555",
+    color: "#888",
     fontFamily: "'Bebas Neue', sans-serif",
     letterSpacing: 1,
   },
   trackBtn: {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: 11,
-    color: "#fff",
     padding: "3px 8px",
     borderRadius: 3,
     letterSpacing: 1,
@@ -811,14 +805,13 @@ const s = {
     textAlign: "center",
   },
 
-  // FOOTER
   footer: {
     position: "fixed",
     bottom: 0,
     left: 0,
     right: 0,
     background: "#000",
-    borderTop: `1px solid ${chrome}20`,
+    borderTop: `1px solid ${chrome}15`,
     padding: "10px 16px",
     zIndex: 10,
   },
@@ -828,12 +821,8 @@ const s = {
     justifyContent: "center",
     gap: 4,
   },
-  footerText: {
-    fontSize: 11,
-    color: "#444",
-  },
+  footerText: { fontSize: 11, color: "#444" },
 
-  // MODALER
   overlay: {
     position: "fixed",
     inset: 0,
@@ -874,7 +863,7 @@ const s = {
   },
   modalDivider: {
     height: 1,
-    background: `linear-gradient(90deg, transparent, ${chrome}60, transparent)`,
+    background: `linear-gradient(90deg, transparent, ${chrome}50, transparent)`,
     margin: "4px 0",
   },
   modalArt: {
@@ -884,6 +873,13 @@ const s = {
     margin: "0 auto",
     border: `2px solid ${chrome}40`,
   },
+  modalTitle: {
+    fontFamily: "'Playfair Display', serif",
+    fontSize: 20,
+    fontWeight: 700,
+    color: cream,
+    lineHeight: 1.2,
+  },
   modalTrackName: {
     fontFamily: "'Playfair Display', serif",
     fontSize: 18,
@@ -891,17 +887,8 @@ const s = {
     color: cream,
     lineHeight: 1.2,
   },
-  modalArtist: {
-    fontSize: 13,
-    color: chrome,
-    opacity: 0.7,
-  },
-  modalText: {
-    color: "#888",
-    fontSize: 14,
-    lineHeight: 1.6,
-    margin: 0,
-  },
+  modalArtist: { fontSize: 13, color: chrome, opacity: 0.7 },
+  modalText: { color: "#888", fontSize: 14, lineHeight: 1.6, margin: 0 },
   modalPrice: {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: 44,
@@ -918,7 +905,6 @@ const s = {
     marginTop: 4,
   },
 
-  // KNAPPAR
   btnNeon: {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: 16,
@@ -929,14 +915,14 @@ const s = {
     borderRadius: 4,
     padding: "14px 32px",
     cursor: "pointer",
-    boxShadow: `0 0 20px ${neonRed}60`,
+    boxShadow: `0 0 16px ${neonRed}50`,
   },
   btnGhost: {
     fontFamily: "'Lato', sans-serif",
     fontSize: 13,
     color: "#555",
     background: "transparent",
-    border: `1px solid #333`,
+    border: "1px solid #333",
     borderRadius: 4,
     padding: "10px 24px",
     cursor: "pointer",
