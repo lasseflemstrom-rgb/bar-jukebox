@@ -1,6 +1,5 @@
 
-  
-import { useState, useEffect, useRef } from "react";
+  import { useState, useEffect, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -107,6 +106,7 @@ export default function Jukebox() {
   const [guestQueue, setGuestQueue] = useState([]);
   const [recentlyPlayed, setRecentlyPlayed] = useState([]);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [addingTrack, setAddingTrack] = useState(null);
   const lastSongId = useRef(null);
 
@@ -139,6 +139,7 @@ export default function Jukebox() {
         setQueueOpen(isOpen);
         setRecentlyPlayed(rp || []);
         setGuestQueue(gq || []);
+        setDataLoaded(true);
       } catch {}
     };
     poll();
@@ -238,7 +239,6 @@ export default function Jukebox() {
           </div>
         )}
 
-        {/* HEADER */}
         <header style={s.header}>
           <div style={s.logoWrap}>
             <img src={LOGO_SRC} alt="Musikmaskinen Jukebox" style={s.headerLogo} />
@@ -259,7 +259,6 @@ export default function Jukebox() {
           )}
         </header>
 
-        {/* KÖ-BILJETTER */}
         {guestQueueCount > 0 && (
           <div style={s.ticketSection}>
             {guestQueue.map((t, i) => (
@@ -275,14 +274,12 @@ export default function Jukebox() {
           </div>
         )}
 
-        {/* NOTIS */}
         {notification && (
           <div style={{ ...s.toast, background: notification.type === "error" ? "#3d0000" : "#003d1a", borderColor: notification.type === "error" ? neonRed : "#00cc66" }}>
             {notification.msg}
           </div>
         )}
 
-        {/* SÖK */}
         <div style={s.searchSection}>
           <div style={s.searchBox}>
             <span style={s.searchIcon}>♫</span>
@@ -296,17 +293,10 @@ export default function Jukebox() {
           </div>
         </div>
 
-        {/* LÅTLISTA */}
         <div style={s.trackList}>
           {loading && <div style={s.emptyMsg}>Laddar spellista...</div>}
-          {backendError && (
-            <div style={{ ...s.emptyMsg, color: neonRed }}>
-              ⚠️ Kunde inte ladda spellistan.
-            </div>
-          )}
-          {!loading && !backendError && filtered.length === 0 && (
-            <div style={s.emptyMsg}>Inga låtar hittades.</div>
-          )}
+          {backendError && <div style={{ ...s.emptyMsg, color: neonRed }}>⚠️ Kunde inte ladda spellistan.</div>}
+          {!loading && !backendError && filtered.length === 0 && <div style={s.emptyMsg}>Inga låtar hittades.</div>}
           {filtered.map((track, i) => {
             const isAdding = addingTrack === track.id;
             const inQueue = guestQueue.some(t => t.track_id === track.id);
@@ -343,7 +333,6 @@ export default function Jukebox() {
           })}
         </div>
 
-        {/* FOOTER */}
         <footer style={s.footer}>
           <div style={s.footerInner}>
             <span style={s.footerText}>Musik via</span>
@@ -351,24 +340,29 @@ export default function Jukebox() {
           </div>
         </footer>
 
-        {/* VÄLKOMSTMODAL */}
+        {/* VÄLKOMSTMODAL — väntar på data innan knappen visas */}
         {showWelcome && (
           <div style={s.overlay}>
             <div style={s.modal} onClick={e => e.stopPropagation()}>
               <img src={LOGO_SRC} alt="Musikmaskinen" style={{ height: 100, width: "auto", margin: "0 auto", display: "block" }} />
               <div style={s.modalHeader}>VÄLKOMMEN!</div>
               <div style={s.modalDivider} />
-              {!queueOpen ? (
-                <p style={s.modalText}>🔒 Kön är stängd för ikväll.</p>
+              {!dataLoaded ? (
+                <p style={s.modalText}>Laddar...</p>
+              ) : !queueOpen ? (
+                <>
+                  <p style={s.modalText}>🔒 Kön är stängd för ikväll.</p>
+                  <button style={s.btnNeon} onClick={() => setShowWelcome(false)}>SE SPELLISTAN</button>
+                </>
               ) : (
-                <p style={s.modalText}>
-                  Välj en låt från listan och lägg till den i jukebox!
-                  {!testMode && <><br /><span style={{ color: amber, fontWeight: 700 }}>Kostar {CONFIG.PRICE_PER_SONG} kr per låt.</span></>}
-                </p>
+                <>
+                  <p style={s.modalText}>
+                    Välj en låt från listan och lägg till den i jukebox!
+                    {!testMode && <><br /><span style={{ color: amber, fontWeight: 700 }}>Kostar {CONFIG.PRICE_PER_SONG} kr per låt.</span></>}
+                  </p>
+                  <button style={s.btnNeon} onClick={() => setShowWelcome(false)}>VÄLJ LÅT ♫</button>
+                </>
               )}
-              <button style={s.btnNeon} onClick={() => setShowWelcome(false)}>
-                {queueOpen ? "VÄLJ LÅT ♫" : "SE SPELLISTAN"}
-              </button>
             </div>
           </div>
         )}
@@ -447,7 +441,7 @@ const globalStyles = `
   .track-row:active { transform: scale(0.98); }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes neonPulse { 0%, 100% { text-shadow: 0 0 10px #ff2222, 0 0 20px #ff2222; } 50% { text-shadow: 0 0 5px #ff2222; } }
-  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes fadeInScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
   input::placeholder { color: #888; }
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: #111; }
@@ -469,7 +463,6 @@ const s = {
     overflowX: "hidden",
     paddingBottom: 72,
   },
-
   testRibbon: {
     background: "#2a1400",
     color: amber,
@@ -493,8 +486,6 @@ const s = {
     fontWeight: 700,
     cursor: "pointer",
   },
-
-  // HEADER
   header: {
     background: "#0a0a0a",
     borderBottom: `2px solid ${chrome}40`,
@@ -513,7 +504,6 @@ const s = {
     width: "auto",
     display: "block",
   },
-
   nowPlayingBar: {
     display: "flex",
     alignItems: "center",
@@ -567,8 +557,6 @@ const s = {
     borderRadius: 1,
     transition: "width 1s linear",
   },
-
-  // BILJETTER
   ticketSection: {
     padding: "8px 12px",
     display: "flex",
@@ -602,11 +590,7 @@ const s = {
     overflow: "hidden",
     textOverflow: "ellipsis",
   },
-  ticketArtist: {
-    fontSize: 11,
-    color: chrome,
-    opacity: 0.6,
-  },
+  ticketArtist: { fontSize: 11, color: chrome, opacity: 0.6 },
   ticketNote: {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: 10,
@@ -614,7 +598,6 @@ const s = {
     letterSpacing: 2,
     opacity: 0.7,
   },
-
   toast: {
     position: "fixed",
     top: 80,
@@ -631,8 +614,6 @@ const s = {
     whiteSpace: "nowrap",
     animation: "fadeIn 0.3s ease",
   },
-
-  // SÖK — CREAM
   searchSection: { padding: "12px 12px 6px" },
   searchBox: {
     display: "flex",
@@ -661,8 +642,6 @@ const s = {
     fontSize: 14,
     padding: "4px",
   },
-
-  // LÅTLISTA
   trackList: {
     padding: "6px 12px",
     display: "flex",
@@ -733,7 +712,6 @@ const s = {
     minWidth: 52,
     textAlign: "center",
   },
-
   footer: {
     position: "fixed",
     bottom: 0,
@@ -752,29 +730,32 @@ const s = {
   },
   footerText: { fontSize: 11, color: "#444" },
 
+  // MODALER — centrerade på skärmen
   overlay: {
     position: "fixed",
     inset: 0,
-    background: "rgba(0,0,0,0.92)",
+    background: "rgba(0,0,0,0.88)",
     zIndex: 50,
     display: "flex",
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "center",
     backdropFilter: "blur(4px)",
+    padding: "20px",
   },
   modal: {
     background: "#0f0d08",
-    borderRadius: "12px 12px 0 0",
+    borderRadius: 16,
     border: `2px solid ${chrome}`,
-    borderBottom: "none",
-    padding: "28px 24px 40px",
+    padding: "32px 24px",
     width: "100%",
-    maxWidth: 480,
+    maxWidth: 420,
     textAlign: "center",
     display: "flex",
     flexDirection: "column",
     gap: 12,
-    animation: "slideUp 0.3s ease",
+    animation: "fadeInScale 0.25s ease",
+    maxHeight: "90vh",
+    overflowY: "auto",
   },
   modalHeader: {
     fontFamily: "'Bebas Neue', sans-serif",
@@ -818,7 +799,6 @@ const s = {
     letterSpacing: 2,
     lineHeight: 1,
   },
-
   btnNeon: {
     fontFamily: "'Bebas Neue', sans-serif",
     fontSize: 16,
