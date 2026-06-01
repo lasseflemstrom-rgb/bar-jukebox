@@ -347,23 +347,11 @@ export default function Jukebox() {
               <img src={LOGO_SRC} alt="Musikmaskinen" style={{ height: 100, width: "auto", margin: "0 auto", display: "block" }} />
               <div style={s.modalHeader}>VÄLKOMMEN!</div>
               <div style={s.modalDivider} />
-              {!dataLoaded ? (
-                <p style={s.modalText}>Laddar...</p>
-              ) : !queueOpen ? (
-                <>
-                  <p style={s.modalText}>🔒 Kön är stängd för ikväll.</p>
-                  <button style={s.btnNeon} onClick={() => setShowWelcome(false)}>SE SPELLISTAN</button>
-                </>
-              ) : (
-                <>
-                  <p style={s.modalText}>
-                    Välj en låt från listan och lägg till den i jukebox!
-                    {!testMode && <><br /><span style={{ color: amber, fontWeight: 700 }}>Kostar {CONFIG.PRICE_PER_SONG} kr per låt.</span></>}
-                  </p>
-                  <button style={s.btnNeon} onClick={() => setShowWelcome(false)}>VÄLJ LÅT ♫</button>
-                </>
-              )}
-            </div>
+              <p style={s.modalText}>
+  Välj en låt från listan och lägg till den i jukebox!
+  {!testMode && <><br /><span style={{ color: amber, fontWeight: 700 }}>Kostar {CONFIG.PRICE_PER_SONG} kr per låt.</span></>}
+</p>
+<button style={s.btnNeon} onClick={() => setShowWelcome(false)}>VÄLJ LÅT ♫</button>
           </div>
         )}
 
