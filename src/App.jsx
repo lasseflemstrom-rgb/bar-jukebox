@@ -376,7 +376,13 @@ export default function Jukebox() {
               <div style={s.modalDivider} />
               <div style={s.modalTrackName}>{selected?.name}</div>
               <p style={s.modalText}>Den här låten spelades nyss eller står redan i kön. Välj en annan låt!</p>
-              <button style={s.btnNeon} onClick={handleClose}>VÄLJ ANNAN LÅT</button>
+              <button
+                style={s.btnNeon}
+                onClick={() => setShowWelcome(false)}
+                onTouchEnd={(e) => { e.preventDefault(); setShowWelcome(false); }}
+              >
+               VÄLJ LÅT ♫
+              </button>
             </div>
           </div>
         )}
@@ -428,6 +434,7 @@ const globalStyles = `
   html, body { background: #0f0f0f; font-family: 'Lato', sans-serif; overflow-x: hidden; touch-action: pan-y; }
   .track-row { transition: all 0.15s ease; }
   .track-row:active { transform: scale(0.98); }
+  button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes neonPulse { 0%, 100% { text-shadow: 0 0 10px #ff2222, 0 0 20px #ff2222; } 50% { text-shadow: 0 0 5px #ff2222; } }
   @keyframes fadeInScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
