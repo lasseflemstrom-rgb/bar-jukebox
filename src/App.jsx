@@ -352,6 +352,7 @@ export default function Jukebox() {
   {!testMode && <><br /><span style={{ color: amber, fontWeight: 700 }}>Kostar {CONFIG.PRICE_PER_SONG} kr per låt.</span></>}
 </p>
 <button style={s.btnNeon} onClick={() => setShowWelcome(false)}>VÄLJ LÅT ♫</button>
+            </div>
           </div>
         )}
 
