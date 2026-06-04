@@ -70,26 +70,34 @@ export default async function handler(req, res) {
     }
 
     if (type === "recommendations") {
-      const token = await getToken();
-      let all = [];
-      let url = "https://api.spotify.com/v1/playlists/" + process.env.SPOTIFY_PLAYLIST_ID + "/items?limit=50";
-      while (url) {
-        const r = await fetch(url, { headers: { Authorization: "Bearer " + token } });
-        const data = await r.json();
-        all = all.concat(data.items.filter(i => i.track || i.item).map(i => i.track || i.item));
-        url = data.next || null;
-      }
-      const shuffled = all.sort(() => Math.random() - 0.5).slice(0, 5);
-      const seedTracks = shuffled.map(t => t.id).join(",");
-      const recRes = await fetch(
-        `https://api.spotify.com/v1/recommendations?seed_tracks=${seedTracks}&limit=10&market=SE`,
-        { headers: { Authorization: "Bearer " + token } }
-      );
-      const recData = await recRes.json();
-      return res.json(recData.tracks || []);
-    }
+  const token = await getToken();
+  // Hämta spellistan
+  let all = [];
+  let url = "https://api.spotify.com/v1/playlists/" + process.env.SPOTIFY_PLAYLIST_ID + "/items?limit=50";
+  while (url) {
+    const r = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+    const data = await r.json();
+    all = all.concat(data.items.filter(i => i.track || i.item).map(i => i.track || i.item));
+    url = data.next || null;
   }
-
+  // Plocka 5 slumpmässiga artister från spellistan
+  const shuffled = all.sort(() => Math.random() - 0.5).slice(0, 5);
+  const existingIds = new Set(all.map(t => t.id));
+  // Sök efter fler låtar av samma artister
+  const results = [];
+  for (const track of shuffled) {
+    const artist = track.artists?.[0]?.name;
+    if (!artist) continue;
+    const r = await fetch(
+      `https://api.spotify.com/v1/search?q=artist:${encodeURIComponent(artist)}&type=track&limit=5&market=SE`,
+      { headers: { Authorization: "Bearer " + token } }
+    );
+    const data = await r.json();
+    const tracks = (data.tracks?.items || []).filter(t => !existingIds.has(t.id));
+    if (tracks.length > 0) results.push(tracks[0]);
+  }
+  return res.json(results);
+}
   if (req.method === "POST") {
     const { action, uri } = req.body;
     const token = await getToken();
