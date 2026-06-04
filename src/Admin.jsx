@@ -45,6 +45,9 @@ export default function Admin() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [playlistMsg, setPlaylistMsg] = useState(null);
 
+  const [recommendations, setRecommendations] = useState([]);
+  const [recsLoading, setRecsLoading] = useState(false);
+
   const addLog = (msg) => {
     setLog(prev => [`${new Date().toLocaleTimeString()} — ${msg}`, ...prev].slice(0, 20));
   };
@@ -52,6 +55,15 @@ export default function Admin() {
   const showMsg = (msg, type = "success") => {
     setPlaylistMsg({ msg, type });
     setTimeout(() => setPlaylistMsg(null), 3000);
+  };
+
+  const fetchRecommendations = async () => {
+    setRecsLoading(true);
+    try {
+      const results = await adminGet("recommendations");
+      setRecommendations(results);
+    } catch {}
+    setRecsLoading(false);
   };
 
   useEffect(() => {
@@ -92,6 +104,7 @@ export default function Admin() {
     adminGet("playlist")
       .then(data => { setPlaylist(data); setPlaylistLoading(false); })
       .catch(() => setPlaylistLoading(false));
+    fetchRecommendations();
   }, [activeTab]);
 
   useEffect(() => {
@@ -158,7 +171,6 @@ export default function Admin() {
   const progressPct = nowPlaying ? (progressMs / nowPlaying.duration_ms) * 100 : 0;
   const remaining = nowPlaying ? Math.max(0, nowPlaying.duration_ms - progressMs) : 0;
 
-  // LOGIN
   if (!loggedIn) {
     return (
       <>
@@ -224,7 +236,6 @@ export default function Admin() {
         {activeTab === "live" && (
           <div style={s.grid}>
 
-            {/* SPELAR NU */}
             <div style={s.card}>
               <div style={s.cardTitle}>SPELAR NU</div>
               {nowPlaying ? (
@@ -259,7 +270,6 @@ export default function Admin() {
               )}
             </div>
 
-            {/* GÄSTBESTÄLLNINGAR */}
             <div style={s.card}>
               <div style={s.cardTitle}>GÄSTBESTÄLLNINGAR ({guestQueue.length})</div>
               {guestQueue.length === 0 ? (
@@ -277,7 +287,6 @@ export default function Admin() {
               )}
             </div>
 
-            {/* SPELAS HÄRNÄST */}
             <div style={s.card}>
               <div style={s.cardTitle}>SPELAS HÄRNÄST ({spotifyQueue.length})</div>
               {spotifyQueue.length === 0 ? (
@@ -297,7 +306,6 @@ export default function Admin() {
               )}
             </div>
 
-            {/* LOGG */}
             <div style={s.card}>
               <div style={s.cardTitle}>AKTIVITETSLOGG</div>
               {log.length === 0 ? (
@@ -350,6 +358,39 @@ export default function Admin() {
               ))}
             </div>
 
+            {/* REKOMMENDATIONER */}
+            <div style={s.card}>
+              <div style={{ ...s.cardTitle, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>🎯 SPOTIFY-FÖRSLAG</span>
+                <button style={s.btnControl} onClick={fetchRecommendations} disabled={recsLoading}>
+                  {recsLoading ? "Laddar..." : "🔄 Nya förslag"}
+                </button>
+              </div>
+              {recsLoading ? (
+                <div style={s.empty}>Hämtar förslag...</div>
+              ) : recommendations.length === 0 ? (
+                <div style={s.empty}>Inga förslag just nu</div>
+              ) : (
+                recommendations.map(track => (
+                  <div key={track.id} style={s.resultRow}>
+                    <img src={track.album?.images?.[2]?.url} style={s.queueArt} alt="" />
+                    <div style={s.queueInfo}>
+                      <div style={s.queueName}>{track.name}</div>
+                      <div style={s.queueArtist}>{track.artists?.map(a => a.name).join(", ")}</div>
+                    </div>
+                    <div style={s.queueDuration}>{msToMin(track.duration_ms)}</div>
+                    <button
+                      style={playlist.some(t => t.id === track.id) ? s.btnAdded : s.btnAdd}
+                      onClick={() => handleAddToPlaylist(track)}
+                      disabled={playlist.some(t => t.id === track.id)}
+                    >
+                      {playlist.some(t => t.id === track.id) ? "✓" : "➕"}
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
             {/* SPELLISTA */}
             <div style={s.card}>
               <div style={s.cardTitle}>SPELLISTA ({playlist.length} låtar)</div>
@@ -398,7 +439,6 @@ const darkBg = "#0f0d08";
 const cardBg = "#161208";
 
 const s = {
-  // LOGIN
   loginWrap: {
     minHeight: "100vh",
     background: "#0a0a0a",
@@ -454,16 +494,12 @@ const s = {
     padding: "14px",
     cursor: "pointer",
   },
-
-  // APP
   app: {
     minHeight: "100vh",
     background: "#0a0a0a",
     fontFamily: "'Lato', sans-serif",
     paddingBottom: 40,
   },
-
-  // HEADER
   header: {
     background: darkBg,
     borderBottom: `2px solid ${chrome}30`,
@@ -506,34 +542,30 @@ const s = {
     letterSpacing: 2,
     fontWeight: 700,
   },
-
-  // FLIKAR
   tabs: {
-  display: "flex",
-  borderBottom: `1px solid ${chrome}20`,
-  background: "#0d0b07",
-},
-tab: {
-  flex: 1,
-  padding: "14px 0",
-  background: "none",
-  border: "none",
-  borderBottom: "3px solid transparent",
-  color: "#666",
-  fontSize: 15,
-  fontWeight: 700,
-  cursor: "pointer",
-  fontFamily: "'Lato', sans-serif",
-  letterSpacing: 0.5,
-  textAlign: "center",
-  transition: "all 0.15s ease",
-},
-tabActive: {
-  color: cream,
-  borderBottom: `3px solid #e81a1a`,
-},
-
-  // GRID
+    display: "flex",
+    borderBottom: `1px solid ${chrome}20`,
+    background: "#0d0b07",
+  },
+  tab: {
+    flex: 1,
+    padding: "14px 0",
+    background: "none",
+    border: "none",
+    borderBottom: "3px solid transparent",
+    color: "#666",
+    fontSize: 15,
+    fontWeight: 700,
+    cursor: "pointer",
+    fontFamily: "'Lato', sans-serif",
+    letterSpacing: 0.5,
+    textAlign: "center",
+    transition: "all 0.15s ease",
+  },
+  tabActive: {
+    color: cream,
+    borderBottom: `3px solid #e81a1a`,
+  },
   grid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
@@ -541,7 +573,6 @@ tabActive: {
     padding: 16,
     maxWidth: 960,
     margin: "0 auto",
-    className: "admin-grid",
   },
   playlistWrap: {
     display: "flex",
@@ -551,8 +582,6 @@ tabActive: {
     maxWidth: 700,
     margin: "0 auto",
   },
-
-  // KORT
   card: {
     background: cardBg,
     borderRadius: 10,
@@ -583,8 +612,6 @@ tabActive: {
     fontWeight: 700,
     border: "1px solid",
   },
-
-  // SPELAR NU
   nowPlayingRow: {
     display: "flex",
     gap: 12,
@@ -647,8 +674,6 @@ tabActive: {
     fontFamily: "'Lato', sans-serif",
     transition: "background 0.15s",
   },
-
-  // KÖ-RADER
   queueRow: {
     display: "flex",
     alignItems: "center",
@@ -695,8 +720,6 @@ tabActive: {
     fontFamily: "'Bebas Neue', sans-serif",
     letterSpacing: 1,
   },
-
-  // LOGG
   logEntry: {
     fontSize: 12,
     color: "#555",
@@ -704,8 +727,6 @@ tabActive: {
     borderBottom: `1px solid ${chrome}08`,
     fontFamily: "'Lato', sans-serif",
   },
-
-  // SPELLISTA
   searchInput: {
     width: "100%",
     padding: "10px 14px",
@@ -725,8 +746,6 @@ tabActive: {
     padding: "8px 0",
     borderBottom: `1px solid ${chrome}10`,
   },
-
-  // KNAPPAR
   btnSuccess: {
     background: "#15803d",
     color: "#fff",

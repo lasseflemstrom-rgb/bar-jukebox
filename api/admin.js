@@ -41,6 +41,7 @@ export default async function handler(req, res) {
         playing,
         queue: queueData.queue || [],
         queueOpen: settings.queue_open !== "false",
+        guestQueue: await sql`SELECT * FROM guest_queue WHERE expires_at > NOW() ORDER BY added_at ASC`,
       });
     }
 
@@ -66,6 +67,26 @@ export default async function handler(req, res) {
       });
       const data = await r.json();
       return res.json(data.tracks?.items || []);
+    }
+
+    if (type === "recommendations") {
+      const token = await getToken();
+      let all = [];
+      let url = "https://api.spotify.com/v1/playlists/" + process.env.SPOTIFY_PLAYLIST_ID + "/items?limit=50";
+      while (url) {
+        const r = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+        const data = await r.json();
+        all = all.concat(data.items.filter(i => i.track || i.item).map(i => i.track || i.item));
+        url = data.next || null;
+      }
+      const shuffled = all.sort(() => Math.random() - 0.5).slice(0, 5);
+      const seedTracks = shuffled.map(t => t.id).join(",");
+      const recRes = await fetch(
+        `https://api.spotify.com/v1/recommendations?seed_tracks=${seedTracks}&limit=10&market=SE`,
+        { headers: { Authorization: "Bearer " + token } }
+      );
+      const recData = await recRes.json();
+      return res.json(recData.tracks || []);
     }
   }
 
