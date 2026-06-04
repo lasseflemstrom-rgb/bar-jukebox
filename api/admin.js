@@ -23,28 +23,28 @@ export default async function handler(req, res) {
     }
 
     if (type === "status") {
-      const token = await getToken();
-      const [playingRes, queueRes, settingsRows] = await Promise.all([
-        fetch("https://api.spotify.com/v1/me/player/currently-playing", {
-          headers: { Authorization: "Bearer " + token },
-        }),
-        fetch("https://api.spotify.com/v1/me/player/queue", {
-          headers: { Authorization: "Bearer " + token },
-        }),
-        sql`SELECT * FROM settings`,
-      ]);
-      const playing = playingRes.status === 204 ? null : await playingRes.json();
-      const queueData = await queueRes.json();
-      const settings = {};
-      settingsRows.forEach(r => settings[r.key] = r.value);
-      return res.json({
-        playing,
-        queue: queueData.queue || [],
-        queueOpen: settings.queue_open !== "false",
-        guestQueue: await sql`SELECT * FROM guest_queue WHERE expires_at > NOW() ORDER BY added_at ASC`,
-      });
-    }
-
+  const token = await getToken();
+  const [playingRes, queueRes, settingsRows, guestRows] = await Promise.all([
+    fetch("https://api.spotify.com/v1/me/player/currently-playing", {
+      headers: { Authorization: "Bearer " + token },
+    }),
+    fetch("https://api.spotify.com/v1/me/player/queue", {
+      headers: { Authorization: "Bearer " + token },
+    }),
+    sql`SELECT * FROM settings`,
+    sql`SELECT * FROM guest_queue ORDER BY added_at ASC`,
+  ]);
+  const playing = playingRes.status === 204 ? null : await playingRes.json();
+  const queueData = await queueRes.json();
+  const settings = {};
+  settingsRows.forEach(r => settings[r.key] = r.value);
+  return res.json({
+    playing,
+    queue: queueData.queue || [],
+    queueOpen: settings.queue_open !== "false",
+    guestQueue: guestRows,
+  });
+}
     if (type === "playlist") {
       const token = await getToken();
       let all = [];
