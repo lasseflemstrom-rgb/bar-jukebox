@@ -7,7 +7,7 @@ const CONFIG = {
   STRIPE_PUBLISHABLE_KEY: "pk_live_51TeeRLAdQAy3aaIQZ5u1Y4aydfmncnstszQG5dTaWFviMs7oY9bHFr3tltEj1aYtkeMUqzN4cCQGYfoBQPqof2fi00pDuSqLVh", // pk_test_...
   PRICE_PER_SONG: 10,
   MAX_QUEUE_SIZE: 3,
-  TEST_MODE: false,
+  TEST_MODE: true,
 };
 
 const stripePromise = loadStripe(CONFIG.STRIPE_PUBLISHABLE_KEY);
