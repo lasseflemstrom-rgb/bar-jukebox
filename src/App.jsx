@@ -341,20 +341,27 @@ export default function Jukebox() {
         </footer>
 
         {/* VÄLKOMSTMODAL — väntar på data innan knappen visas */}
-        {showWelcome && (
-          <div style={s.overlay}>
-            <div style={s.modal} onClick={e => e.stopPropagation()}>
-              <img src={LOGO_SRC} alt="Musikmaskinen" style={{ height: 100, width: "auto", margin: "0 auto", display: "block" }} />
-              <div style={s.modalHeader}>VÄLKOMMEN!</div>
-              <div style={s.modalDivider} />
-              <p style={s.modalText}>
-  Välj en låt från listan och lägg till den i jukebox!
-  {!testMode && <><br /><span style={{ color: amber, fontWeight: 700 }}>Kostar {CONFIG.PRICE_PER_SONG} kr per låt.</span></>}
-</p>
-<button style={s.btnNeon} onClick={() => setShowWelcome(false)}>VÄLJ LÅT ♫</button>
-            </div>
-          </div>
-        )}
+       {showWelcome && (
+  <div style={s.overlay} onTouchEnd={(e) => { e.preventDefault(); setShowWelcome(false); }}>
+    <div style={s.modal} onClick={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()}>
+      <img src={LOGO_SRC} alt="Musikmaskinen" style={{ height: 100, width: "auto", margin: "0 auto", display: "block" }} />
+      <div style={s.modalHeader}>VÄLKOMMEN!</div>
+      <div style={s.modalDivider} />
+      <p style={s.modalText}>
+        Välj en låt från listan och lägg till den i jukebox!
+        {!testMode && <><br /><span style={{ color: amber, fontWeight: 700 }}>Kostar {CONFIG.PRICE_PER_SONG} kr per låt.</span></>}
+      </p>
+      <button
+        style={s.btnNeon}
+        onClick={() => setShowWelcome(false)}
+        onTouchEnd={(e) => { e.preventDefault(); setShowWelcome(false); }}
+      >
+        VÄLJ LÅT ♫
+      </button>
+    </div>
+  </div>
+)}
+
 
         {/* BETALNINGSMODAL */}
         {selected && paymentStep === "pay" && clientSecret && (
