@@ -4,10 +4,10 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 const CONFIG = {
-  STRIPE_PUBLISHABLE_KEY: "Ypk_test_51TazxlAiBeFbGSJSUmWzOombCWLtTwS1jf19caS6IgohzkL2DAzZpt9baz4U18bGt8mftZECI7Kg7xrccjnzPqtE00Gi7ZproV", // pk_test_...
+  STRIPE_PUBLISHABLE_KEY: "pk_live_51TeeRLAdQAy3aaIQZ5u1Y4aydfmncnstszQG5dTaWFviMs7oY9bHFr3tltEj1aYtkeMUqzN4cCQGYfoBQPqof2fi00pDuSqLVh", // pk_test_...
   PRICE_PER_SONG: 15,
   MAX_QUEUE_SIZE: 3,
-  TEST_MODE: true,
+  TEST_MODE: false,
 };
 
 const stripePromise = loadStripe(CONFIG.STRIPE_PUBLISHABLE_KEY);
