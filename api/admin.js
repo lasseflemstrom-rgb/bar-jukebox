@@ -23,28 +23,29 @@ export default async function handler(req, res) {
     }
 
     if (type === "status") {
-  const token = await getToken();
-  const [playingRes, queueRes, settingsRows, guestRows] = await Promise.all([
-    fetch("https://api.spotify.com/v1/me/player/currently-playing", {
-      headers: { Authorization: "Bearer " + token },
-    }),
-    fetch("https://api.spotify.com/v1/me/player/queue", {
-      headers: { Authorization: "Bearer " + token },
-    }),
-    sql`SELECT * FROM settings`,
-    sql`SELECT * FROM guest_queue ORDER BY added_at ASC`,
-  ]);
-  const playing = playingRes.status === 204 ? null : await playingRes.json();
-  const queueData = await queueRes.json();
-  const settings = {};
-  settingsRows.forEach(r => settings[r.key] = r.value);
-  return res.json({
-    playing,
-    queue: queueData.queue || [],
-    queueOpen: settings.queue_open !== "false",
-    guestQueue: guestRows,
-  });
-}
+      const token = await getToken();
+      const [playingRes, queueRes, settingsRows, guestRows] = await Promise.all([
+        fetch("https://api.spotify.com/v1/me/player/currently-playing", {
+          headers: { Authorization: "Bearer " + token },
+        }),
+        fetch("https://api.spotify.com/v1/me/player/queue", {
+          headers: { Authorization: "Bearer " + token },
+        }),
+        sql`SELECT * FROM settings`,
+        sql`SELECT * FROM guest_queue ORDER BY added_at ASC`,
+      ]);
+      const playing = playingRes.status === 204 ? null : await playingRes.json();
+      const queueData = await queueRes.json();
+      const settings = {};
+      settingsRows.forEach(r => settings[r.key] = r.value);
+      return res.json({
+        playing,
+        queue: queueData.queue || [],
+        queueOpen: settings.queue_open !== "false",
+        guestQueue: guestRows,
+      });
+    }
+
     if (type === "playlist") {
       const token = await getToken();
       let all = [];
@@ -70,34 +71,33 @@ export default async function handler(req, res) {
     }
 
     if (type === "recommendations") {
-  const token = await getToken();
-  // Hämta spellistan
-  let all = [];
-  let url = "https://api.spotify.com/v1/playlists/" + process.env.SPOTIFY_PLAYLIST_ID + "/items?limit=50";
-  while (url) {
-    const r = await fetch(url, { headers: { Authorization: "Bearer " + token } });
-    const data = await r.json();
-    all = all.concat(data.items.filter(i => i.track || i.item).map(i => i.track || i.item));
-    url = data.next || null;
+      const token = await getToken();
+      let all = [];
+      let url = "https://api.spotify.com/v1/playlists/" + process.env.SPOTIFY_PLAYLIST_ID + "/items?limit=50";
+      while (url) {
+        const r = await fetch(url, { headers: { Authorization: "Bearer " + token } });
+        const data = await r.json();
+        all = all.concat(data.items.filter(i => i.track || i.item).map(i => i.track || i.item));
+        url = data.next || null;
+      }
+      const shuffled = all.sort(() => Math.random() - 0.5).slice(0, 5);
+      const existingIds = new Set(all.map(t => t.id));
+      const results = [];
+      for (const track of shuffled) {
+        const artist = track.artists?.[0]?.name;
+        if (!artist) continue;
+        const r = await fetch(
+          `https://api.spotify.com/v1/search?q=artist:${encodeURIComponent(artist)}&type=track&limit=5&market=SE`,
+          { headers: { Authorization: "Bearer " + token } }
+        );
+        const data = await r.json();
+        const tracks = (data.tracks?.items || []).filter(t => !existingIds.has(t.id));
+        if (tracks.length > 0) results.push(tracks[0]);
+      }
+      return res.json(results);
+    }
   }
-  // Plocka 5 slumpmässiga artister från spellistan
-  const shuffled = all.sort(() => Math.random() - 0.5).slice(0, 5);
-  const existingIds = new Set(all.map(t => t.id));
-  // Sök efter fler låtar av samma artister
-  const results = [];
-  for (const track of shuffled) {
-    const artist = track.artists?.[0]?.name;
-    if (!artist) continue;
-    const r = await fetch(
-      `https://api.spotify.com/v1/search?q=artist:${encodeURIComponent(artist)}&type=track&limit=5&market=SE`,
-      { headers: { Authorization: "Bearer " + token } }
-    );
-    const data = await r.json();
-    const tracks = (data.tracks?.items || []).filter(t => !existingIds.has(t.id));
-    if (tracks.length > 0) results.push(tracks[0]);
-  }
-  return res.json(results);
-}
+
   if (req.method === "POST") {
     const { action, uri } = req.body;
     const token = await getToken();
