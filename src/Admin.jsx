@@ -234,7 +234,7 @@ export default function Admin() {
 
         {/* LIVE-FLIKEN */}
         {activeTab === "live" && (
-          <div style={s.grid}>
+          <div className="admin-grid">
 
             <div style={s.card}>
               <div style={s.cardTitle}>SPELAR NU</div>
@@ -427,7 +427,8 @@ const globalStyles = `
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: #111; }
   ::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
-  @media (max-width: 600px) {
+  .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px; max-width: 960px; margin: 0 auto; }
+  @media (orientation: portrait) and (max-width: 768px) {
     .admin-grid { grid-template-columns: 1fr !important; }
   }
 `;
