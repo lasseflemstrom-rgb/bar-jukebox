@@ -503,7 +503,7 @@ const s = {
     padding: "12px 16px 8px",
   },
   headerLogo: {
-    height: 130,
+    height: 140,
     width: "auto",
     display: "block",
   },
@@ -773,8 +773,8 @@ const s = {
     margin: "4px 0",
   },
   modalArt: {
-    width: 100,
-    height: 100,
+    width: 120,
+    height: 120,
     borderRadius: 4,
     margin: "0 auto",
     border: `2px solid ${chrome}40`,
