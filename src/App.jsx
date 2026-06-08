@@ -773,8 +773,8 @@ const s = {
     margin: "4px 0",
   },
   modalArt: {
-    width: 120,
-    height: 120,
+    width: 140,
+    height: 140,
     borderRadius: 4,
     margin: "0 auto",
     border: `2px solid ${chrome}40`,
